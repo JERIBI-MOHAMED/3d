@@ -29,9 +29,8 @@ WALL = 1.2               # shade wall at the bottom of the texture (mm) -> light
 SQUIRCLE_N = 4.0         # 2 = circle, 4 = rounded square, higher = squarer
 
 TEXTURE = True           # pyramid texture (False = smooth shade, light file)
-TEX_PITCH = 2.0          # size of one pyramid (mm)
-TEX_AMP = 0.7            # pyramid height (mm)
-TEX_RES = 0.45           # mesh sampling step (mm), lower = finer but heavier file
+TEX_PITCH = 2.4          # size of one pyramid (mm)
+TEX_AMP = 0.9            # pyramid height (mm)
 FLAT_BAND = 3.0          # smooth band at top / bottom of the shade (mm)
 
 BASE_WIDTH = 100.0       # base width (mm)
@@ -144,15 +143,20 @@ def build_shade():
     seg = np.hypot(np.diff(rf * np.cos(fine)), np.diff(rf * np.sin(fine)))
     perim = seg.sum()
 
-    pitch = perim / max(1, round(perim / TEX_PITCH))  # integer number of tiles
-    n_theta = int(math.ceil(perim / TEX_RES / 4) * 4) if TEXTURE else 240
-    n_out = int(SHADE_HEIGHT / TEX_RES) if TEXTURE else 80
+    # beads form a regular grid; the mesh is sampled 6x per bead so they stay round
+    SUB = 6
+    n_u = max(1, round(perim / TEX_PITCH))
+    pitch = perim / n_u
+    n_v = max(1, round(SHADE_HEIGHT / TEX_PITCH))
+    pitch_z = SHADE_HEIGHT / n_v
+    n_theta = n_u * SUB if TEXTURE else 240
+    n_out = n_v * SUB + 1 if TEXTURE else 80
     n_in = 80
 
-    th = np.linspace(0, 2 * math.pi, n_theta, endpoint=False)
-    r0 = squircle_r(th, half)
     s_cum = np.concatenate([[0], np.cumsum(seg)])
-    s = np.interp(th, fine, s_cum)  # arc length at each sample
+    s = np.arange(n_theta) * perim / n_theta           # equal arc length steps
+    th = np.interp(s, s_cum, fine)
+    r0 = squircle_r(th, half)
 
     def ring_points(z, radius_offset, bump):
         t = z / SHADE_HEIGHT
@@ -164,13 +168,11 @@ def build_shade():
     def bump_at(z):
         if not TEXTURE:
             return np.zeros_like(th)
-        u = (s + z) / pitch
-        v = (s - z) / pitch
-        fu = np.abs(2 * (u - np.floor(u)) - 1)
-        fv = np.abs(2 * (v - np.floor(v)) - 1)
-        pyr = 1 - np.maximum(fu, fv)            # 0 valley -> 1 pyramid tip
+        u = s / pitch
+        v = z / pitch_z + 0.5 * (np.floor(u) % 2)       # brick offset, woven look
+        bead = (0.5 + 0.5 * np.cos(2 * math.pi * u)) * (0.5 + 0.5 * np.cos(2 * math.pi * v))
         win = smoothstep(min(z, SHADE_HEIGHT - z) / FLAT_BAND)
-        return TEX_AMP * pyr * win
+        return TEX_AMP * bead * win
 
     outer = [ring_points(z, 0.0, bump_at(z))
              for z in np.linspace(0, SHADE_HEIGHT, n_out)]
