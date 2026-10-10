@@ -118,14 +118,23 @@ def box_at_angle(name, r0, r1, z0, z1, width, angle_deg):
     return make_object(name, verts, faces)
 
 
+def apply_modifier(obj, mod):
+    """Bake a modifier into the mesh without bpy.ops (works in any UI context)."""
+    bpy.context.view_layer.update()
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    new_mesh = bpy.data.meshes.new_from_object(evaluated)
+    old_mesh = obj.data
+    obj.modifiers.remove(mod)
+    obj.data = new_mesh
+    bpy.data.meshes.remove(old_mesh)
+
+
 def boolean(target, tool, op):
     mod = target.modifiers.new("bool", "BOOLEAN")
     mod.operation = op
     mod.object = tool
     mod.solver = "EXACT"
-    bpy.context.view_layer.objects.active = target
-    target.select_set(True)
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    apply_modifier(target, mod)
     bpy.data.objects.remove(tool, do_unlink=True)
 
 
@@ -177,7 +186,8 @@ def build_lid():
 
 # ----------------------------------------------------------------- MAIN
 def export_stl(obj, path):
-    bpy.ops.object.select_all(action="DESELECT")
+    for other in bpy.context.scene.objects:
+        other.select_set(False)
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     if hasattr(bpy.ops.wm, "stl_export"):
