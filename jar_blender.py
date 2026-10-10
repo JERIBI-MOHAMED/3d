@@ -38,10 +38,11 @@ EDGE_R = 4.0           # rounded bottom edge of the body / top edge of the lid
 COLLAR_OD = 80.0       # collar outer diameter (mm)
 COLLAR_ID = 74.0       # collar inner diameter (mm)
 COLLAR_H = 8.0         # collar height above the body (mm)
-LUG_W = 7.0            # snap lug width (mm)
+LUG_W = 7.0            # bayonet lug width (mm)
 LUG_PROUD = 0.9        # how far the lugs stick out (mm)
 LUG_Z = (2.0, 5.0)     # lug height range on the collar (mm above body top)
 CLEARANCE = 0.4        # fit tolerance (mm)
+TWIST_DEG = 30.0       # how far you turn the lid to lock it (clockwise from above)
 
 COLS_PER_RIB = 10      # mesh resolution around the circumference
 
@@ -118,6 +119,20 @@ def box_at_angle(name, r0, r1, z0, z1, width, angle_deg):
     return make_object(name, verts, faces)
 
 
+def arc_slot(name, r0, r1, z0, z1, a0, a1, steps=16):
+    """Curved channel (cut tool): radius r0..r1, height z0..z1, angle a0..a1."""
+    corners = [(r0, z0), (r1, z0), (r1, z1), (r0, z1)]
+    verts = []
+    for ang in np.linspace(math.radians(a0), math.radians(a1), steps):
+        verts += [(r * math.cos(ang), r * math.sin(ang), z) for r, z in corners]
+    faces = [[0, 1, 2, 3], [4 * (steps - 1) + k for k in (3, 2, 1, 0)]]
+    for i in range(steps - 1):
+        for k in range(4):
+            k1 = (k + 1) % 4
+            faces.append([4 * i + k, 4 * i + k1, 4 * (i + 1) + k1, 4 * (i + 1) + k])
+    return make_object(name, verts, faces)
+
+
 def apply_modifier(obj, mod):
     """Bake a modifier into the mesh without bpy.ops (works in any UI context)."""
     bpy.context.view_layer.update()
@@ -177,10 +192,18 @@ def build_lid():
     prof.append((0.0, LID_H, 0.0))
     lid = lathe("jar_lid", prof)
 
-    for ang in (0, 120, 240):                             # notches that catch the lugs
-        notch = box_at_angle("notch", ri_l - 0.5, RC_OUT + LUG_PROUD + CLEARANCE,
-                             LUG_Z[0] - 0.2, LUG_Z[1] + 0.4, LUG_W + 0.8, ang)
-        boolean(lid, notch, "DIFFERENCE")
+    # bayonet channels: a vertical entry from the lid rim, then a curved channel
+    # (L shape). Lugs enter straight down, the lid is turned TWIST_DEG, and the
+    # lug is trapped under the channel roof.
+    r_in = ri_l - 0.5
+    r_out = RC_OUT + LUG_PROUD + CLEARANCE
+    z0, z1 = LUG_Z[0] - 0.2, LUG_Z[1] + 0.4
+    half_w = math.degrees((LUG_W + 0.8) / 2 / RC_OUT)       # lug half width as an angle
+    for ang in (0, 120, 240):
+        entry = box_at_angle("entry", r_in, r_out, -1.0, z1, LUG_W + 0.8, ang)
+        boolean(lid, entry, "DIFFERENCE")
+        chan = arc_slot("chan", r_in, r_out, z0, z1, ang, ang + TWIST_DEG + half_w)
+        boolean(lid, chan, "DIFFERENCE")
     return lid
 
 
@@ -203,7 +226,7 @@ def main():
     body, lid = build_body(), build_lid()
     for o in (body, lid):
         export_stl(o, os.path.join(OUT_DIR, o.name + ".stl"))
-    lid.location.x = DIAMETER + 20          # lid beside the body for viewing
+    lid.location.z = BODY_H + 35            # exploded view: lid floating above the body
     print("Exported to", OUT_DIR)
     for o in (body, lid):
         d = o.dimensions
