@@ -20,7 +20,7 @@ hard stop at the end, cannot be lifted once locked. Tune `TWIST_DEG`, `CLEARANCE
 
 # BMW M5 CS (F90) 1:64 snap kit (`m5cs_generator.py`)
 
-![M5 CS](images/m5cs_3quarter.png)
+![M5 CS](images/m5cs_blender_3quarter.png)
 
 Kit card in the style of the RolfBertz3D E46 GTR: one plate, **no supports, no glue**.
 Ready to slice: `BMW_M5_CS_F90.3mf` (Bambu Studio / Orca / Creality Print), or the STLs in `stl/m5cs_*.stl`.
@@ -49,3 +49,12 @@ small parts stick. Tune the fits at the top of the script: `PRESS_FIT` (wheel on
 Regenerate (about 4 min, plain Python, no Blender):
 `pip install numpy scipy scikit-image trimesh manifold3d matplotlib` then `python m5cs_generator.py`
 (`--preview` for a fast coarse body).
+
+Blender render (`m5cs_render_blender.py`): loads `stl/m5cs_*.stl`, assembles the car and renders
+`images/m5cs_blender_{3quarter,rear,plate}.png` with Cycles.
+`blender -b -P m5cs_render_blender.py -- [out_dir] [samples] [res_percent]`
+(or `pip install bpy` on Python 3.11 and run it with `python`).
+
+| Rear | Plate |
+|---|---|
+| ![rear](images/m5cs_blender_rear.png) | ![plate](images/m5cs_blender_plate.png) |
