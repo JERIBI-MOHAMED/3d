@@ -32,6 +32,7 @@ BODY_AT, CHASSIS_AT = (18.5, 0.0), (-12.5, 0.0)
 WHEEL_AT, AXLE_AT = (-31.0, 50.5), (-29.0, 0.0)
 BODY_Z0, AXLE_Z, AXLE_R = 2.0, 5.5, 1.0 - 0.1
 X_FA, X_RA, TYRE_IN_Y = 24.398, -22.195, 10.417
+REMESH = 0.07   # body voxel remesh for rendering (mm), hides simplification facets; 0 = off
 S = 0.01   # 1 mm -> 1 cm in the scene, keeps lights and camera at friendly sizes
 
 # plate -> car: car x = plate Y, car y = BODY_AT.x - plate X, car z = plate Z + BODY_Z0
@@ -74,12 +75,19 @@ def make_materials():
 
 
 # ----------------------------------------------------------------- helpers
-def load(name, mat, matrix, smooth=True, collection=None):
+def load(name, mat, matrix, smooth=True, collection=None, remesh=0.0):
     bpy.ops.wm.stl_import(filepath=os.path.join(STL, f"m5cs_{name}.stl"))
     ob = bpy.context.selected_objects[0]
     ob.data.transform(matrix)
     ob.data.transform(Matrix.Scale(S, 4))
     ob.data.materials.append(mat)
+    if remesh:
+        mod = ob.modifiers.new("remesh", "REMESH")
+        mod.mode = "VOXEL"
+        mod.voxel_size = remesh * S
+        mod.use_smooth_shade = True
+        mod.adaptivity = 0.0
+        smooth = False
     if smooth:
         with bpy.context.temp_override(selected_editable_objects=[ob], active_object=ob, object=ob):
             bpy.ops.object.shade_auto_smooth(angle=math.radians(40))
@@ -105,7 +113,7 @@ def build_car():
     bpy.context.scene.collection.children.link(car)
     T = PLATE_TO_CAR(BODY_AT)
     for k in ("paint", "black", "gold", "red", "white"):
-        load(f"body_{k}", MAT[k], T, collection=car)
+        load(f"body_{k}", MAT[k], T, collection=car, remesh=REMESH)
     load("chassis", MAT["chassis"], PLATE_TO_CAR(CHASSIS_AT), smooth=False, collection=car)
     to_origin = Matrix.Translation((-WHEEL_AT[0], -WHEEL_AT[1], 0))
     rim = load("wheel_rim", MAT["rim"], to_origin, collection=car)
@@ -209,6 +217,8 @@ def main():
     cam = setup_scene()
     car = build_car()
     shoot(cam, (1.3, -1.48, 0.6), (0.01, 0.0, 0.085), os.path.join(OUT, "m5cs_blender_3quarter.png"))
+    if "--front-only" in sys.argv:
+        return
     shoot(cam, (-1.42, -1.36, 0.66), (-0.02, 0.0, 0.085), os.path.join(OUT, "m5cs_blender_rear.png"))
     car.hide_render = True
     build_plate()
