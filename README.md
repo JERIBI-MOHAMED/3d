@@ -17,3 +17,22 @@ Print notes
 Open: align the lid ribs with the lug marks, push down, turn **30 deg clockwise** to lock; reverse to open.
 Mechanism checked by boolean interference tests: lid drops straight when aligned, turns freely over 30 deg,
 hard stop at the end, cannot be lifted once locked. Tune `TWIST_DEG`, `CLEARANCE` for your printer.
+
+# Desk-grommet controller stand with cable compartment (`controller_stand.scad`)
+
+Parametric OpenSCAD model (all sizes at the top of the file). `./make_stand.sh` re-exports STLs + previews.
+
+| Part | STL | Print |
+|---|---|---|
+| Insert block 43.2 x 39.2 x 50 (goes into the 44 mm desk opening) | `stand_block.stl` | upright, no supports, PETG preferred (clips flex) |
+| Top stand 52 x 48 x 68 (sits on the desk, holds the controller) | `stand_top.stl` | upright, no supports (2 short bridges) |
+| Cable door 46 x 14 x 2.5 | `stand_door.stl` | outer face on the bed |
+| Hinge pin Ø2.5 x 50.3 + head | `stand_pin.stl` | lying on its flat, 100 % infill (print 2) |
+
+Assembly: door into the front opening, pin from the right side (head side) through wall + door tube,
+press into the left wall. Snap the block's neck into the socket under the top (2 clicks), then push
+the whole stand into the desk opening until the top sits on the desk; the barbed clips grip the
+opening walls (any desk thickness). Cables come up through the block and park in the 3 keyhole
+pockets behind the door; they exit through the door's top notches.
+Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
+(latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
