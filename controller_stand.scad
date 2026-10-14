@@ -7,7 +7,7 @@
 //   4. hinge pin     - holds the door (or use a 2.5 mm steel rod / nail)
 //
 // Export one part:   openscad -D 'PART="block"' -o block.stl controller_stand.scad
-// PART = block | top | door | pin | assembly | exploded
+// PART = block | top | door | pin | plate (all parts, one print) | assembly | exploded
 //
 // Frame: X = width (52), Y = depth (front = -Y, door side), Z = up.
 // Assembly z = 0 is the desk surface.
@@ -288,6 +288,12 @@ if (PART == "block") block();
 else if (PART == "top") top_stand();
 else if (PART == "door") rotate([90, 0, 0]) door();          // outer face on the bed
 else if (PART == "pin") hinge_pin();
+else if (PART == "plate") {                                  // everything on one bed (~110 x 110 mm)
+    translate([-28, 18, 0]) top_stand();
+    translate([30, 18, 0]) block();
+    translate([0, -22, 0]) rotate([90, 0, 0]) door();
+    for (i = [0, 1]) translate([-PIN_LEN / 2, -46 - 8 * i, 0]) hinge_pin();   // 1 spare pin
+}
 else if (PART == "assembly") {
     color("dimgray") top_stand();
     color("gray") placed_block();

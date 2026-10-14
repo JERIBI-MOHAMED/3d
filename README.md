@@ -28,6 +28,7 @@ Parametric OpenSCAD model (all sizes at the top of the file). `./make_stand.sh` 
 | Top stand 52 x 48 x 68 (sits on the desk, holds the controller) | `stand_top.stl` | upright, no supports (2 short bridges) |
 | Cable door 46 x 14 x 2.5 | `stand_door.stl` | outer face on the bed |
 | Hinge pin Ø2.5 x 50.3 + head | `stand_pin.stl` | lying on its flat, 100 % infill (print 2) |
+| **All parts on one bed** (107 x 97 mm, fits any Creality) | `stand_all_in_one_plate.stl` / `.3mf` | 1 top + 1 block + 1 door + 2 pins, already oriented |
 
 Assembly: door into the front opening, pin from the right side (head side) through wall + door tube,
 press into the left wall. Snap the block's neck into the socket under the top (2 clicks), then push
