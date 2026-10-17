@@ -37,3 +37,33 @@ opening walls (any desk thickness). Cables come up through the block and park in
 pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
+
+# E27 base for the twisted octagonal "DesignerLamp" shade (`designer_lamp_base.scad`)
+
+Parametric OpenSCAD base that fits the DesignerLamp shade (140 x 100 octagon, 3 mm bottom plate with a 45 mm hole)
+and holds an **E27 ring socket** (threaded sleeve 40 mm + ring). The socket neck (71 shoulder / 65 neck / 57 bore /
+41 lip) and the sloped, support-free inner ceiling come from the reference part `obj_7_SOLID`.
+`./make_designer_base.sh` re-exports STLs + previews.
+
+| Part | STL | Print |
+|---|---|---|
+| Body 130 x 133 x 67.5 (octagon 45 mm + neck 20 mm + centering ring) | `designer_base_body.stl` | upright, no supports, 0.2 mm, 3 walls, 15 % infill |
+| Bottom cap 3 mm | `designer_base_cap.stl` | as exported (feet recesses on the bed) |
+| Cable clamp 26 x 6.5 x 5 | `designer_base_clamp.stl` | flat, groove up |
+| All parts on one bed (~320 x 135, K2 Pro) | `designer_base_plate.stl` | |
+
+Hardware: E27 socket with outer thread + ring, 2-core 0.75 mm2 cable with an inline switch and plug,
+4 x M3x10 countersunk (cap), 2 x M3x16 pan head (clamp), 4 x rubber feet 10 mm. **LED bulb only** (shade walls 0.5 mm PLA).
+
+Assembly
+1. Feed the cable in through the side hole, lay it in the saddle groove, put the clamp on top (groove down) and screw
+   the 2 M3x16 from below through the saddle. The cable must not pull out (strain relief).
+2. Wire the socket (brown = live, blue = neutral), push it **from below** through the 41 mm lip until its shoulder
+   sits on the seat.
+3. Drop the shade over the socket thread: its 45 mm hole centers on the 44.2 mm ring and the plate rests on the neck.
+4. Screw the socket ring on top: it clamps lip (5 mm) + shade plate (3 mm). Screw the cap on (4 x M3).
+
+Fit checks (real shade mesh + OpenSCAD booleans): shade on the neck 0 interference and in contact (0.1 mm lower
+collides), ring/hole clearance 0.33 mm per side, socket 0 interference with the lip/seat/bore, clamp 0 interference
+with the wall, neck profile matches the reference within 0.05 mm (lip kept at 5 mm instead of 9.5). Steepest
+inner-ceiling overhang ~58 deg in the two long corners; enable "support on build plate only" if your printer struggles.
