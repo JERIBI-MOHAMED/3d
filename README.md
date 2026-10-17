@@ -37,3 +37,13 @@ opening walls (any desk thickness). Cables come up through the block and park in
 pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
+
+# Doctor nameplate + logo (`stl/doctor_logo_desk_200mm.3mf`, Creality Print 7, K2 SE)
+
+Plate 1: logo. Plate 2: nameplate (text = filament 1, base = filament 2). Font unchanged.
+- Nameplate rotation fixed from 90.8 deg to exactly 90 deg: the face was tilted 0.42 mm, so the top was a
+  3-layer staircase and only one edge touched the bed.
+- 0.2 mm layers: face at 22.0 mm and 0.8 mm text land exactly on layer lines (4 text layers).
+- Smooth top: ironing on all top surfaces (10 %, 0.15 mm, 40 mm/s), top surface 120 mm/s, Arachne walls
+  so the thin script strokes fill without holes, avoid crossing walls to stop travel scars.
+- Faster inside: 10 % infill combined every 2 layers, inner wall acceleration 6000, 3 bottom layers.
