@@ -1,259 +1,222 @@
-// Electrical base for the twisted octagonal "DesignerLamp" shade (E27 ring socket)
+// Round "puck" base for the twisted octagonal "DesignerLamp" shade (E27 ring socket)
 // ---------------------------------------------------------------------------
-// 3 printed parts (mm):
-//   1. body   - octagonal hollow base + socket neck (lip with a 41 mm hole)
-//   2. cap    - bottom cover, 4 x M3 countersunk screws, 4 rubber feet
-//   3. clamp  - cable strain-relief bar (2 x M3x16 screwed from below through the saddle)
+// 4 printed parts (mm):
+//   1. body    - D150 x 37 puck, 45 deg bevelled top, 41 mm socket hole (printed upside down)
+//   2. cap     - bottom cover, 4 x M3 countersunk screws, 4 rubber feet
+//   3. clamp   - cable strain-relief bar, 2 x M3x16 screwed from below into the saddle
+//   4. bushing - flanged centering washer: centers the shade's 45 mm hole on the socket thread
 //
-// The E27 ring socket goes up through the 41 mm lip from below, the shade's
-// 45 mm bottom hole drops over the socket thread and the centering ring, and the
-// socket ring is screwed on top: it clamps lip + shade plate together.
-// Neck geometry (71 shoulder / 65 neck / 57 bore / 41 lip) and the sloped, support-free
-// cavity ceiling are taken from the reference part obj_7_SOLID.
+// The E27 ring socket (fully threaded, 2 rings) goes through the 41 mm hole: one ring
+// under the top plate, then bushing + shade on top, then the second ring clamps it all.
+// Socket handling (41 mm lip, ring clamp) taken from the reference part obj_7_SOLID.
 //
 // Export one part:   openscad -D 'PART="body"' -o body.stl designer_lamp_base.scad
-// PART = body | cap | clamp | plate (all parts, one print) | assembly | exploded | section
+// PART = body | cap | clamp | bushing | plate (all parts, one print) | assembly | exploded | section
+//        a_body | a_bushing (parts in assembly position, for fit checks)
 //
 // Frame: Z = up, z = 0 is the underside of the body (the cap sits below it).
+// The cable leaves at the back (-Y).
 
 PART = "assembly";
-$fn = 96;
+$fn = 128;
 
 // ---------------- shade (measured on DesignerLamp.3mf) ----------------
-// octagon at the top of its 3 mm bottom plate, [angle deg, radius mm]
+// octagon at the top of its 3 mm bottom plate, [angle deg, radius mm] (previews only)
 SHADE_POLAR = [[-165.5, 60.83], [-130, 70], [-94.5, 60.83], [-40, 50],
                [14.5, 60.83], [50, 70], [85.5, 60.83], [140, 50]];
 SHADE_HOLE = 45;         // hole in the shade's bottom plate
 SHADE_PLATE = 3;         // shade bottom plate thickness
-SHADE_H = 165;           // total shade height
+SHADE_H = 165;
 SHADE_WALL = 0.5;
 SHADE_TWIST = 2.25;      // deg per mm, clockwise going up (one turn in 160 mm)
 
 // ---------------- 1. body ----------------
-MARGIN = 6;              // body outline = shade outline + MARGIN
-BASE_H = 45;
+BASE_D = 150;
+BASE_H = 37;             // + CAP_T = 40 total
+BEVEL = 5;               // 45 deg bevel -> flat top of BASE_D - 2 * BEVEL = 140 (shade foot: 133)
 WALL = 3;
-TOP_T = 4;               // top plate around the bore
-TOP_CHAMFER = 2;
-CEIL_Z0 = 14;            // straight inner walls up to here, then a sloped ceiling up to the bore
-
-SHOULDER_D = 71;         // neck, from the reference part
-SHOULDER_H = 2;
-SHOULDER_CH = 3;         // 45 deg chamfer 71 -> 65
-NECK_D0 = 65;            // neck at its base
-NECK_D1 = 61;            // neck at its top
-NECK_TAPER = 9;          // 65 -> 61 over the last 9 mm, as on the reference
-NECK_H = 20;             // body top -> neck top (= where the shade plate sits)
-BORE_D = 57;             // room for the socket body and wires
-SEAT_D = 47;             // 45 deg cone 57 -> 47, then flat seat for the socket shoulder
+TOP_T = 5;               // top plate = lip clamped by the socket rings
 LIP_D = 41;              // E27 ring-socket thread (40 mm) + clearance
-LIP_T = 5;               // lip + shade plate = 8 mm clamped by the socket ring
-RING_D = SHADE_HOLE - 0.8;   // centering ring that enters the shade hole
-RING_H = 2.5;            // < SHADE_PLATE so the socket ring presses on the shade
 
-POST_D = 8;              // cap screw posts (vertices 1, 3, 5, 7)
-POST_INSET = 1;          // post centre = vertex radius - POST_INSET
+POST_D = 8;              // cap screw posts, fused to the wall
+POST_R = BASE_D / 2 - WALL - POST_D / 2 + 0.5;
+POST_ANG = [45, 135, 225, 315];
 PILOT_D = 2.6;           // M3 self-tapping
 PILOT_DEPTH = 14;
 
-CABLE_EDGE = 2;          // outline edge (vertex i -> i+1) that gets the cable exit
 CABLE_D = 7;
 CABLE_Z = 10;
-SADDLE_W = 26;           // strain-relief saddle along the wall
-SADDLE_T = 8;            // saddle depth (away from the wall)
-SADDLE_GAP = -0.5;       // saddle fused to the wall (slight overlap)
-CLAMP_SCREW = 9;         // screw offset from the saddle centre
+SADDLE_W = 26;           // strain-relief block hanging from the top plate, behind the cable exit
+SADDLE_T = 8.5;          // radial depth (incl. 0.5 mm into the wall)
+SADDLE_BOT = CABLE_Z + CABLE_D / 2;
+CLAMP_SCREW = 9;         // screw offset from the cable axis
 
 // ---------------- 2. cap ----------------
 CAP_T = 3;
-CAP_CHAMFER = 1.2;
+CAP_CHAMFER = 1;
 CSK_D = 6.5;             // M3 countersink
 SCREW_D = 3.4;
-FOOT_D = 10.5;           // rubber feet recess (vertices 0, 2, 4, 6)
+FOOT_D = 10.5;           // rubber feet recess
 FOOT_DEPTH = 1.5;
-FOOT_INSET = 3;
+FOOT_R = 58;
+FOOT_ANG = [0, 90, 180, 270];
 
 // ---------------- 3. clamp ----------------
 CLAMP_T = 5;
-HEAD_D = 6.5;            // M3 pan head recess under the saddle
-HEAD_H = 2.2;
+CLAMP_DEPTH = 7;
 GROOVE_D = 5;            // squeezes a 6-7 mm round cable
-CLAMP_DEPTH = SADDLE_T + SADDLE_GAP - 1;   // stops 0.5 mm short of the wall
+HEAD_D = 6.5;            // M3 pan head recess
+HEAD_H = 2.2;
+
+// ---------------- 4. bushing ----------------
+FLANGE_D = 58;
+FLANGE_T = 1.5;
+SLEEVE_D = SHADE_HOLE - 0.8;   // enters the shade hole
+SLEEVE_H = 2.5;                // < SHADE_PLATE so the top ring presses on the shade
+BUSH_BORE = 40.6;              // on the socket thread
 
 // ---------------- derived ----------------
-Z_TOP = BASE_H + NECK_H;              // neck top, shade plate underside
-Z_LIP = Z_TOP - LIP_T;                // underside of the lip (socket seat)
-Z_CONE = Z_LIP - (BORE_D - SEAT_D) / 2;
-Z_CEIL = BASE_H - TOP_T;              // cavity ceiling
+Z_TOP = BASE_H;                       // top face of the body
+Z_CEIL = BASE_H - TOP_T;              // underside of the top plate
+Z_SHADE = Z_TOP + FLANGE_T;           // shade plate underside
+R_IN = BASE_D / 2 - WALL;
+SCREW_Y = -(R_IN - 5);                // radial position of the clamp screws (cable side)
 
 function pt(p) = [p[1] * cos(p[0]), p[1] * sin(p[0])];
 SHADE_PTS = [for (p = SHADE_POLAR) pt(p)];
-function vtx(i, dr = 0) = pt([SHADE_POLAR[i][0], SHADE_POLAR[i][1] + dr]);
-
-E0 = SHADE_PTS[CABLE_EDGE];
-E1 = SHADE_PTS[(CABLE_EDGE + 1) % 8];
-EDGE_MID = (E0 + E1) / 2;
-EDGE_DIR = (E1 - E0) / norm(E1 - E0);
-EDGE_N = [EDGE_DIR[1], -EDGE_DIR[0]];               // outward (CCW polygon)
-EDGE_ANG = atan2(EDGE_N[1], EDGE_N[0]);
-WALL_IN = EDGE_MID + EDGE_N * (MARGIN - WALL);      // inner face of the wall
-SADDLE_C = WALL_IN - EDGE_N * (SADDLE_GAP + SADDLE_T / 2);
-SADDLE_TOP = CABLE_Z - CABLE_D / 2;
-
-POSTS = [for (i = [1, 3, 5, 7]) vtx(i, -POST_INSET)];
-FEET = [for (i = [0, 2, 4, 6]) vtx(i, -FOOT_INSET)];
-
-// ---------------- helpers ----------------
-module outline(off = 0) offset(r = off) polygon(SHADE_PTS);
-module slab(off, z0, z1) translate([0, 0, z0]) linear_extrude(z1 - z0) outline(off);
-// along the cable edge: x = along the wall, y = outward normal
-module at_edge(c, z = 0) translate([c[0], c[1], z]) rotate(EDGE_ANG - 90) children();
 
 // ---------------- 1. body ----------------
-module body_shell() hull() {
-    slab(MARGIN, 0, BASE_H - TOP_CHAMFER);
-    slab(MARGIN - TOP_CHAMFER, BASE_H - 0.01, BASE_H);
+module body_shell() {
+    cylinder(d = BASE_D, h = BASE_H - BEVEL + 0.01);
+    translate([0, 0, BASE_H - BEVEL]) cylinder(d1 = BASE_D, d2 = BASE_D - 2 * BEVEL, h = BEVEL);
 }
 
-module neck_outer() {
-    translate([0, 0, BASE_H - 0.01]) {
-        cylinder(d = SHOULDER_D, h = SHOULDER_H + 0.01);
-        translate([0, 0, SHOULDER_H]) cylinder(d1 = SHOULDER_D, d2 = NECK_D0, h = SHOULDER_CH);
-        cylinder(d = NECK_D0, h = NECK_H - NECK_TAPER + 0.01);
-        translate([0, 0, NECK_H - NECK_TAPER]) cylinder(d1 = NECK_D0, d2 = NECK_D1, h = NECK_TAPER + 0.01);
-    }
-    // centering ring for the shade hole
-    translate([0, 0, Z_TOP - 0.01]) cylinder(d = RING_D, h = RING_H + 0.01);
+module saddle() difference() {
+    translate([-SADDLE_W / 2, -R_IN - 0.5, SADDLE_BOT]) cube([SADDLE_W, SADDLE_T, Z_CEIL - SADDLE_BOT + 0.01]);
+    // cable groove + pilot holes, both on the free (lower) face
+    translate([0, 0, SADDLE_BOT - 1.5]) rotate([90, 0, 0]) cylinder(d = 6, h = 2 * BASE_D, center = true);
+    for (s = [-1, 1]) translate([s * CLAMP_SCREW, SCREW_Y, SADDLE_BOT - 1]) cylinder(d = PILOT_D, h = 11, $fn = 24);
 }
 
-module neck_inner() {
-    translate([0, 0, Z_CEIL - 1]) cylinder(d = BORE_D, h = Z_CONE - Z_CEIL + 1.01);
-    translate([0, 0, Z_CONE]) cylinder(d1 = BORE_D, d2 = SEAT_D, h = Z_LIP - Z_CONE);
-    translate([0, 0, Z_LIP - 1]) cylinder(d = LIP_D, h = LIP_T + RING_H + 2);
-    translate([0, 0, Z_TOP + RING_H - 0.6]) cylinder(d1 = LIP_D, d2 = LIP_D + 1.4, h = 0.61);
-}
-
-module saddle() at_edge(SADDLE_C) difference() {
-    translate([-SADDLE_W / 2, -SADDLE_T / 2, 0]) cube([SADDLE_W, SADDLE_T, SADDLE_TOP]);
-    // shallow cable groove + screw holes, screwed from below with the cap off
-    translate([0, 0, SADDLE_TOP + 1.5]) rotate([90, 0, 0]) cylinder(d = 6, h = SADDLE_T + 2, center = true);
-    for (s = [-1, 1]) translate([s * CLAMP_SCREW, 0, -1]) {
-        cylinder(d = SCREW_D, h = SADDLE_TOP + 2, $fn = 24);
-        cylinder(d = HEAD_D, h = 1 + HEAD_H, $fn = 32);
-    }
-}
-
-module cable_hole() at_edge(EDGE_MID + EDGE_N * MARGIN, CABLE_Z) rotate([90, 0, 0]) {   // local z = inwards
-    translate([0, 0, -1]) cylinder(d = CABLE_D, h = WALL + 10);
-    translate([0, 0, -0.01]) cylinder(d1 = CABLE_D + 2.4, d2 = CABLE_D, h = 1.21);
-}
-
-module cavity() hull() {
-    slab(MARGIN - WALL, -1, CEIL_Z0);
-    translate([0, 0, Z_CEIL]) cylinder(d = BORE_D, h = 0.01);
+module cable_hole() translate([0, -BASE_D / 2, CABLE_Z]) rotate([-90, 0, 0]) {   // local z = inwards
+    translate([0, 0, -1]) cylinder(d = CABLE_D, h = WALL + 4, $fn = 48);
+    translate([0, 0, -0.01]) cylinder(d1 = CABLE_D + 2.4, d2 = CABLE_D, h = 1.21, $fn = 48);
 }
 
 module body() difference() {
     union() {
         difference() {
             body_shell();
-            cavity();
+            translate([0, 0, -1]) cylinder(r = R_IN, h = Z_CEIL + 1);
         }
-        neck_outer();
-        for (p = POSTS) translate(p) cylinder(d = POST_D, h = Z_CEIL + 0.01, $fn = 32);
+        for (a = POST_ANG) rotate(a) translate([POST_R, 0, 0]) cylinder(d = POST_D, h = Z_CEIL + 0.01, $fn = 32);
         saddle();
     }
-    neck_inner();
+    translate([0, 0, -1]) cylinder(d = LIP_D, h = BASE_H + 2);
+    translate([0, 0, Z_TOP - 0.6]) cylinder(d1 = LIP_D, d2 = LIP_D + 1.4, h = 0.61);   // vs elephant foot
     cable_hole();
-    for (p = POSTS) translate([p[0], p[1], -1]) cylinder(d = PILOT_D, h = PILOT_DEPTH + 1, $fn = 24);
+    for (a = POST_ANG) rotate(a) translate([POST_R, 0, -1]) cylinder(d = PILOT_D, h = PILOT_DEPTH + 1, $fn = 24);
 }
 
 // ---------------- 2. cap (printed as modelled, bottom face on the bed) ----------------
 module cap() difference() {
     hull() {
-        slab(MARGIN - CAP_CHAMFER, 0, 0.01);
-        slab(MARGIN, CAP_CHAMFER, CAP_T);
+        cylinder(d = BASE_D - 2 * CAP_CHAMFER, h = 0.01);
+        translate([0, 0, CAP_CHAMFER]) cylinder(d = BASE_D, h = CAP_T - CAP_CHAMFER);
     }
-    for (p = POSTS) translate([p[0], p[1], -1]) {
+    for (a = POST_ANG) rotate(a) translate([POST_R, 0, -1]) {
         cylinder(d = SCREW_D, h = CAP_T + 2, $fn = 24);
         cylinder(d1 = CSK_D + 2, d2 = SCREW_D, h = 1 + (CSK_D + 2 - SCREW_D) / 2, $fn = 32);
     }
-    for (p = FEET) translate([p[0], p[1], -1]) cylinder(d = FOOT_D, h = FOOT_DEPTH + 1, $fn = 48);
+    for (a = FOOT_ANG) rotate(a) translate([FOOT_R, 0, -1]) cylinder(d = FOOT_D, h = FOOT_DEPTH + 1, $fn = 48);
 }
 
 // ---------------- 3. clamp (printed flat, groove up) ----------------
 module clamp() difference() {
     translate([-SADDLE_W / 2, -CLAMP_DEPTH / 2, 0]) cube([SADDLE_W, CLAMP_DEPTH, CLAMP_T]);
     translate([0, 0, CLAMP_T]) rotate([90, 0, 0]) cylinder(d = GROOVE_D, h = CLAMP_DEPTH + 2, center = true);
-    for (s = [-1, 1]) translate([s * CLAMP_SCREW, 0, -1]) cylinder(d = PILOT_D, h = CLAMP_T + 2, $fn = 24);
+    for (s = [-1, 1]) translate([s * CLAMP_SCREW, 0, -1]) {
+        cylinder(d = SCREW_D, h = CLAMP_T + 2, $fn = 24);
+        cylinder(d = HEAD_D, h = 1 + HEAD_H, $fn = 32);
+    }
 }
+module placed_clamp(dz = 0) translate([0, SCREW_Y, CABLE_Z - CABLE_D / 2 + 1 - CLAMP_T - dz]) clamp();
+
+// ---------------- 4. bushing (printed flange down) ----------------
+module bushing() difference() {
+    union() {
+        cylinder(d = FLANGE_D, h = FLANGE_T);
+        cylinder(d = SLEEVE_D, h = FLANGE_T + SLEEVE_H);
+    }
+    translate([0, 0, -1]) cylinder(d = BUSH_BORE, h = FLANGE_T + SLEEVE_H + 2);
+}
+module placed_bushing(dz = 0) translate([0, 0, Z_TOP + dz]) bushing();
 
 // ---------------- reference volumes (previews only) ----------------
-SHADE_COL = [0.34, 0.87, 0.24, 0.45];
-module ghost_shade() translate([0, 0, Z_TOP]) {
+SHADE_COL = [1, 0.93, 0.8, 0.5];
+module outline(off = 0) offset(r = off) polygon(SHADE_PTS);
+module ghost_shade() translate([0, 0, Z_SHADE]) {
     linear_extrude(SHADE_PLATE) difference() { outline(); circle(d = SHADE_HOLE); }
     translate([0, 0, SHADE_PLATE]) rotate(-SHADE_PLATE * SHADE_TWIST)
         linear_extrude(SHADE_H - SHADE_PLATE, twist = (SHADE_H - SHADE_PLATE) * SHADE_TWIST, slices = 120)
             difference() { outline(); offset(delta = -SHADE_WALL) outline(); }
 }
-module socket() {                                 // generic E27 ring socket
+module ring(z) translate([0, 0, z]) difference() { cylinder(d = 52, h = 4); translate([0, 0, -1]) cylinder(d = 40, h = 6); }
+module socket() {                                 // fully threaded E27 socket with 2 rings
     color("white") {
-        translate([0, 0, Z_LIP - 30]) cylinder(d = 40, h = 27);           // body + terminals
-        translate([0, 0, Z_LIP - 3]) cylinder(d = 46, h = 3);             // shoulder on the seat
-        translate([0, 0, Z_LIP]) cylinder(d = 39.6, h = 22);              // threaded sleeve
-        translate([0, 0, Z_TOP + SHADE_PLATE]) difference() {             // ring
-            cylinder(d = 52, h = 4); translate([0, 0, -1]) cylinder(d = 40, h = 6);
-        }
+        translate([0, 0, 14]) cylinder(d = 40, h = Z_TOP + 26 - 14);
+        ring(Z_CEIL - 4.02);                                              // under the top plate
+        ring(Z_SHADE + SHADE_PLATE + 0.01);                               // on the shade
     }
     color([1, 1, 0.85, 0.6]) hull() {                                      // A60 LED bulb
-        translate([0, 0, Z_LIP + 2]) cylinder(d = 27, h = 25);
-        translate([0, 0, Z_LIP + 70]) sphere(d = 60);
+        translate([0, 0, Z_TOP + 6]) cylinder(d = 27, h = 25);
+        translate([0, 0, Z_TOP + 76]) sphere(d = 60);
     }
 }
 module cable() color("white") {
-    at_edge(EDGE_MID + EDGE_N * (MARGIN + 30), CABLE_Z - 1) rotate([90, 0, 0]) cylinder(d = 6, h = 30 + MARGIN + SADDLE_GAP + SADDLE_T);
+    translate([0, -BASE_D / 2 - 30, CABLE_Z]) rotate([-90, 0, 0]) cylinder(d = 6, h = 30 + WALL + SADDLE_T + 2, $fn = 24);
     hull() {
-        at_edge(SADDLE_C - EDGE_N * (SADDLE_T / 2), CABLE_Z - 1) sphere(d = 6);
-        translate([0, 0, Z_LIP - 32]) sphere(d = 6);
+        translate([0, -R_IN + SADDLE_T + 1, CABLE_Z]) sphere(d = 6, $fn = 24);
+        translate([0, 0, 12]) sphere(d = 6, $fn = 24);
     }
 }
-CLAMP_C = WALL_IN - EDGE_N * (0.5 + CLAMP_DEPTH / 2);
-module placed_clamp(dz = 0) at_edge(CLAMP_C, SADDLE_TOP + 2 + dz) mirror([0, 0, 1]) translate([0, 0, -CLAMP_T]) clamp();
 
 // ---------------- output ----------------
-BASE_COL = "#56DF3D";
-if (PART == "body") body();
+BASE_COL = "#55565c";
+module print_body() translate([0, 0, Z_TOP]) rotate([180, 0, 0]) body();   // top face on the bed
+if (PART == "body") print_body();
 else if (PART == "cap") cap();
 else if (PART == "clamp") clamp();
-else if (PART == "plate") {                                  // ~ 320 x 125 mm, fits the K2 Pro bed
-    translate([-82, 0, 0]) body();
-    translate([82, 0, 0]) cap();
-    translate([0, -70, 0]) clamp();
+else if (PART == "bushing") bushing();
+else if (PART == "a_body") body();
+else if (PART == "a_bushing") placed_bushing();
+else if (PART == "plate") {                                  // 310 x 238 mm, fits the K2 Pro bed (350 x 350)
+    translate([-80, 0, 0]) print_body();
+    translate([80, 0, 0]) cap();
+    translate([0, 100, 0]) clamp();
+    translate([0, -105, 0]) bushing();
 }
 else if (PART == "assembly") {
-    color(BASE_COL) body();
-    color(BASE_COL) translate([0, 0, -CAP_T]) cap();
-    color(BASE_COL) placed_clamp();
+    color(BASE_COL) { body(); translate([0, 0, -CAP_T]) cap(); placed_clamp(); }
+    color("#e8e2d6") placed_bushing();
     socket();
     cable();
     color(SHADE_COL) ghost_shade();
 }
 else if (PART == "exploded") {
-    color(BASE_COL) body();
-    color(BASE_COL) translate([0, 0, -CAP_T - 45]) cap();
-    color(BASE_COL) placed_clamp(60);
-    translate([0, 0, 25]) socket();
-    color(SHADE_COL) translate([0, 0, 70]) ghost_shade();
+    color(BASE_COL) { body(); translate([0, 0, -CAP_T - 40]) cap(); placed_clamp(25); }
+    color("#e8e2d6") placed_bushing(30);
+    translate([0, 0, 60]) socket();
+    color(SHADE_COL) translate([0, 0, 95]) ghost_shade();
 }
 else if (PART == "section") {             // printed parts cut through the socket axis and the cable exit
     difference() {
         union() {
-            color(BASE_COL) body();
-            color(BASE_COL) translate([0, 0, -CAP_T]) cap();
-            color(BASE_COL) placed_clamp();
-            color(SHADE_COL) intersection() { ghost_shade(); cylinder(r = 90, h = Z_TOP + 40); }
+            color(BASE_COL) { body(); translate([0, 0, -CAP_T]) cap(); placed_clamp(); }
+            color("#e8e2d6") placed_bushing();
+            color(SHADE_COL) intersection() { ghost_shade(); cylinder(r = 90, h = Z_SHADE + 30); }
         }
-        rotate(atan2(EDGE_MID[1], EDGE_MID[0])) translate([-200, 0, -10]) cube([400, 200, 400]);
+        translate([0, -200, -10]) cube([200, 400, 400]);
     }
     socket();
     cable();
