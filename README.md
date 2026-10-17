@@ -50,7 +50,7 @@ and holds an **E27 ring socket** (threaded sleeve 40 mm + ring). The socket neck
 | Body 130 x 133 x 67.5 (octagon 45 mm + neck 20 mm + centering ring) | `designer_base_body.stl` | upright, no supports, 0.2 mm, 3 walls, 15 % infill |
 | Bottom cap 3 mm | `designer_base_cap.stl` | as exported (feet recesses on the bed) |
 | Cable clamp 26 x 6.5 x 5 | `designer_base_clamp.stl` | flat, groove up |
-| All parts on one bed (~320 x 135, K2 Pro) | `designer_base_plate.stl` | |
+| All parts on one bed (294 x 140, K2 Pro) | `designer_base_plate.stl` | |
 
 Hardware: E27 socket with outer thread + ring, 2-core 0.75 mm2 cable with an inline switch and plug,
 4 x M3x10 countersunk (cap), 2 x M3x16 pan head (clamp), 4 x rubber feet 10 mm. **LED bulb only** (shade walls 0.5 mm PLA).
