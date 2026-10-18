@@ -37,3 +37,18 @@ opening walls (any desk thickness). Cables come up through the block and park in
 pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
+
+# GP desk gift set (`gp_gift_set.scad`)
+
+Parametric OpenSCAD gift set for a general practitioner (médecin généraliste). Set `NAME` / `TITLE`
+at the top of the file (or `-D 'NAME="Dr ..."'`), then `./make_gp_gifts.sh` re-exports STLs + previews.
+
+| Gift | STL | Print |
+|---|---|---|
+| Nameplate plaque 170 x 64 x 4 (+1.2 raised name, title, ECG, heart, rim) | `gp_plaque.stl` | flat, no supports; filament swap at 4.0 mm (white -> red) |
+| Nameplate stand 140 x 30 x 12, plaque leans back 15 deg | `gp_plaque_stand.stl` | flat, no supports |
+| Pen cup Ø72 x 100 with raised ECG band | `gp_pencup.stl` | upright, no supports; paint the ECG (acrylic marker) or use multi-colour |
+| Stethoscope stand: Ø110 tray base + Ø22 post, 160 mm | `gp_steth_base.stl` | upright, no supports, 20-30 % infill |
+| Stethoscope heart (52 mm, ECG brace, glue-in tab) | `gp_steth_heart.stl` | flat, no supports; glue the tab into the post |
+
+Fit checks (boolean): heart tab / post socket and plaque / stand slot have 0 interference.
