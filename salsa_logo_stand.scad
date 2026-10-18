@@ -10,7 +10,7 @@
 // PART = logo | base | assembly | logo_only (just the logo, no tab - no base needed)
 
 use <fonts/GreatVibes-Regular.ttf>
-use <fonts/DancingScript-VF.ttf>
+use <fonts/Fondamento-Italic.ttf>
 
 PART  = "assembly";
 STYLE = "filled";
@@ -19,7 +19,7 @@ LOGO_TEXT = "Salsa";
 LINE1     = "Dr. Salsabil Ezzine";    // base, line 1
 LINE2     = "Médecin Gynécologue";   // base, line 2
 LOGO_FONT = "Great Vibes";
-BASE_FONT = "Dancing Script:style=Bold";
+BASE_FONT = "Fondamento:style=Italic";   // calligraphic italic, like the reference
 
 C_DARK  = "#5c1a2e";                 // burgundy
 C_LIGHT = "#cbbfa9";                 // beige
@@ -44,7 +44,7 @@ CLR   = 0.4;                         // slot clearance (total)
 BASE_W = 200; BASE_D = 26; BASE_H = 36;
 BASE_R = 1.5;
 TEXT_RELIEF = 1.2;
-LINE1_SIZE = 14; LINE2_SIZE = 8;
+LINE1_SIZE = 13; LINE2_SIZE = 8;
 SLOT_DEPTH = TAB_D;
 
 // ---------------- 2D helpers ----------------
@@ -107,9 +107,9 @@ module base() {
         translate([-(TAB_W + CLR) / 2, -(LOGO_T + CLR) / 2, BASE_H - SLOT_DEPTH]) cube([TAB_W + CLR, LOGO_T + CLR, SLOT_DEPTH + 1]);
     }
     // name / title raised on the front face (print the base on its back to swap colour)
-    color(C_LIGHT) translate([0, -BASE_D / 2 + 0.01, 0]) rotate([90, 0, 0]) linear_extrude(TEXT_RELIEF) {
-        translate([0, BASE_H * 0.63]) text(LINE1, size = LINE1_SIZE, font = BASE_FONT, halign = "center", valign = "center");
-        translate([0, BASE_H * 0.23]) text(LINE2, size = LINE2_SIZE, font = BASE_FONT, halign = "center", valign = "center");
+    color(C_LIGHT) translate([0, -BASE_D / 2 + 0.01, 0]) rotate([90, 0, 0]) linear_extrude(TEXT_RELIEF) offset(0.05) {   // offset cleans overlapping glyph contours
+        translate([0, BASE_H * 0.68]) text(LINE1, size = LINE1_SIZE, font = BASE_FONT, halign = "center", valign = "center");
+        translate([0, BASE_H * 0.24]) text(LINE2, size = LINE2_SIZE, font = BASE_FONT, halign = "center", valign = "center");
     }
 }
 

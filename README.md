@@ -55,7 +55,7 @@ Fit checks (boolean): heart tab / post socket and plaque / stand slot have 0 int
 
 # "Salsa" script logo (`salsa_logo_stand.scad`)
 
-Script logo "Salsa" (Great Vibes, hairlines thickened for printing) on a swash that ties every letter
+Script logo "Salsa" (Great Vibes, hairlines thickened for printing; base text in Fondamento Italic) on a swash that ties every letter
 together, ending in a small heart. Change `LOGO_TEXT`, then `./make_salsa_logo.sh` re-exports STLs + previews.
 
 | Part | STL | Print |
