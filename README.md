@@ -52,3 +52,17 @@ at the top of the file (or `-D 'NAME="Dr ..."'`), then `./make_gp_gifts.sh` re-e
 | Stethoscope heart (52 mm, ECG brace, glue-in tab) | `gp_steth_heart.stl` | flat, no supports; glue the tab into the post |
 
 Fit checks (boolean): heart tab / post socket and plaque / stand slot have 0 interference.
+
+# "Salsa" script logo (`salsa_logo_stand.scad`)
+
+Script logo "Salsa" (Great Vibes, hairlines thickened for printing) on a swash that ties every letter
+together, ending in a small heart. Change `LOGO_TEXT`, then `./make_salsa_logo.sh` re-exports STLs + previews.
+
+| Part | STL | Print |
+|---|---|---|
+| Logo only, filled (burgundy backing + raised beige script), 186 x 70 x 6.6 | `salsa_logo_filled.stl` | flat, no supports; filament swap at 5.0 mm |
+| Logo only, open (script outline), 176 x 63 x 5 | `salsa_logo_open.stl` | flat, no supports, one colour |
+| Optional: same logos with a hidden tab + name base 200 x 26 x 36 | `salsa_logo_*_with_tab.stl`, `salsa_base.stl` | base on its back (text up), swap colour for the text |
+
+Checks: each logo exports as 1 connected piece; logo tab / base slot have 0 interference.
+Fonts in `fonts/` are SIL Open Font License (see `fonts/OFL-*.txt`).
