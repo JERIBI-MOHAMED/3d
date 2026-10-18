@@ -16,8 +16,8 @@ PART  = "assembly";
 STYLE = "filled";
 
 LOGO_TEXT = "Salsa";
-LINE1     = "Dr. Salsa";             // base, line 1
-LINE2     = "Médecin Généraliste";   // base, line 2
+LINE1     = "Dr. Salsabil Ezzine";    // base, line 1
+LINE2     = "Médecin Gynécologue";   // base, line 2
 LOGO_FONT = "Great Vibes";
 BASE_FONT = "Dancing Script:style=Bold";
 
@@ -108,8 +108,8 @@ module base() {
     }
     // name / title raised on the front face (print the base on its back to swap colour)
     color(C_LIGHT) translate([0, -BASE_D / 2 + 0.01, 0]) rotate([90, 0, 0]) linear_extrude(TEXT_RELIEF) {
-        translate([0, BASE_H * 0.6]) text(LINE1, size = LINE1_SIZE, font = BASE_FONT, halign = "center", valign = "center");
-        translate([0, BASE_H * 0.24]) text(LINE2, size = LINE2_SIZE, font = BASE_FONT, halign = "center", valign = "center");
+        translate([0, BASE_H * 0.63]) text(LINE1, size = LINE1_SIZE, font = BASE_FONT, halign = "center", valign = "center");
+        translate([0, BASE_H * 0.23]) text(LINE2, size = LINE2_SIZE, font = BASE_FONT, halign = "center", valign = "center");
     }
 }
 
