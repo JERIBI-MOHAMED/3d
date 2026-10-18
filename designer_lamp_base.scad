@@ -2,7 +2,7 @@
 // ---------------------------------------------------------------------------
 // 4 printed parts (mm):
 //   1. body    - D150 x 37 puck, 45 deg bevelled top, 41 mm socket hole (printed upside down)
-//   2. cap     - bottom cover, 4 x M3 countersunk screws, 4 rubber feet
+//   2. cap     - 2 mm bottom cover with honeycomb vents, 4 x M3 countersunk screws, 4 rubber feet
 //   3. clamp   - cable strain-relief bar, 2 x M3x16 screwed from below into the saddle
 //   4. bushing - flanged centering washer: centers the shade's 45 mm hole on the socket thread
 //
@@ -34,8 +34,13 @@ SHADE_TWIST = 2.25;      // deg per mm, clockwise going up (one turn in 160 mm)
 BASE_D = 150;
 BASE_H = 37;             // + CAP_T = 40 total
 BEVEL = 5;               // 45 deg bevel -> flat top of BASE_D - 2 * BEVEL = 140 (shade foot: 133)
-WALL = 3;
-TOP_T = 5;               // top plate = lip clamped by the socket rings
+WALL = 1.8;              // = 2 + 2 perimeters, no infill between them
+TOP_T = 1.6;             // = 3 bottom + 5 top layers at 0.2: fully solid, no slow internal bridge layer
+LIP_T = 5;               // socket boss under the plate = lip clamped by the socket rings
+LIP_BOSS_D = 60;
+RIBS = 6;                // stiffening ribs under the thin plate, boss -> wall
+RIB_T = 1.8;
+RIB_H = 6;
 LIP_D = 41;              // E27 ring-socket thread (40 mm) + clearance
 
 POST_D = 8;              // cap screw posts, fused to the wall
@@ -52,14 +57,17 @@ SADDLE_BOT = CABLE_Z + CABLE_D / 2;
 CLAMP_SCREW = 9;         // screw offset from the cable axis
 
 // ---------------- 2. cap ----------------
-CAP_T = 3;
+CAP_T = 1.6;             // fully solid at 0.2 mm layers, as the top plate
 CAP_CHAMFER = 1;
 CSK_D = 6.5;             // M3 countersink
 SCREW_D = 3.4;
 FOOT_D = 10.5;           // rubber feet recess
-FOOT_DEPTH = 1.5;
+FOOT_DEPTH = 0.8;
 FOOT_R = 58;
 FOOT_ANG = [0, 90, 180, 270];
+VENT_R = 50;             // honeycomb vents inside this radius (saves filament, cools the socket)
+VENT_HEX = 10;           // hole across flats (finger-safe, < 12 mm)
+VENT_RIB = 2.4;
 
 // ---------------- 3. clamp ----------------
 CLAMP_T = 5;
@@ -78,6 +86,7 @@ BUSH_BORE = 40.6;              // on the socket thread
 // ---------------- derived ----------------
 Z_TOP = BASE_H;                       // top face of the body
 Z_CEIL = BASE_H - TOP_T;              // underside of the top plate
+Z_LIP = BASE_H - LIP_T;               // underside of the socket boss
 Z_SHADE = Z_TOP + FLANGE_T;           // shade plate underside
 R_IN = BASE_D / 2 - WALL;
 SCREW_Y = -(R_IN - 5);                // radial position of the clamp screws (cable side)
@@ -103,14 +112,28 @@ module cable_hole() translate([0, -BASE_D / 2, CABLE_Z]) rotate([-90, 0, 0]) {  
     translate([0, 0, -0.01]) cylinder(d1 = CABLE_D + 2.4, d2 = CABLE_D, h = 1.21, $fn = 48);
 }
 
+module cavity(grow = 0) {
+    translate([0, 0, -1]) cylinder(r = R_IN + grow, h = BASE_H - BEVEL + 1);
+    translate([0, 0, BASE_H - BEVEL - 0.01])                             // follows the outer bevel
+        cylinder(r1 = R_IN + grow, r2 = R_IN + grow - (Z_CEIL - BASE_H + BEVEL), h = Z_CEIL - BASE_H + BEVEL + 0.01);
+}
+
 module body() difference() {
     union() {
         difference() {
             body_shell();
-            translate([0, 0, -1]) cylinder(r = R_IN, h = Z_CEIL + 1);
+            cavity();
         }
-        for (a = POST_ANG) rotate(a) translate([POST_R, 0, 0]) cylinder(d = POST_D, h = Z_CEIL + 0.01, $fn = 32);
-        saddle();
+        translate([0, 0, Z_LIP]) cylinder(d = LIP_BOSS_D, h = LIP_T - TOP_T + 0.01);
+        intersection() {                            // inner features stay inside the wall (bevel)
+            union() {
+                for (a = POST_ANG) rotate(a) translate([POST_R, 0, 0]) cylinder(d = POST_D, h = Z_CEIL + 0.01, $fn = 32);
+                for (i = [0:RIBS - 1]) rotate(i * 360 / RIBS)
+                    translate([LIP_BOSS_D / 2 - 1, -RIB_T / 2, Z_CEIL - RIB_H]) cube([R_IN - LIP_BOSS_D / 2 + 2, RIB_T, RIB_H + 0.01]);
+                saddle();
+            }
+            cavity(0.5);
+        }
     }
     translate([0, 0, -1]) cylinder(d = LIP_D, h = BASE_H + 2);
     translate([0, 0, Z_TOP - 0.6]) cylinder(d1 = LIP_D, d2 = LIP_D + 1.4, h = 0.61);   // vs elephant foot
@@ -129,6 +152,14 @@ module cap() difference() {
         cylinder(d1 = CSK_D + 2, d2 = SCREW_D, h = 1 + (CSK_D + 2 - SCREW_D) / 2, $fn = 32);
     }
     for (a = FOOT_ANG) rotate(a) translate([FOOT_R, 0, -1]) cylinder(d = FOOT_D, h = FOOT_DEPTH + 1, $fn = 48);
+    translate([0, 0, -1]) linear_extrude(CAP_T + 2) vents();
+}
+
+module vents() {                          // hex grid, only whole cells inside VENT_R
+    p = VENT_HEX + VENT_RIB;
+    d = VENT_HEX / cos(30);
+    for (j = [-8:8], i = [-8:8]) let(c = [(i + (j % 2) / 2) * p, j * p * sin(60)])
+        if (norm(c) + d / 2 <= VENT_R) translate(c) rotate(30) circle(d = d, $fn = 6);
 }
 
 // ---------------- 3. clamp (printed flat, groove up) ----------------
@@ -165,7 +196,7 @@ module ring(z) translate([0, 0, z]) difference() { cylinder(d = 52, h = 4); tran
 module socket() {                                 // fully threaded E27 socket with 2 rings
     color("white") {
         translate([0, 0, 14]) cylinder(d = 40, h = Z_TOP + 26 - 14);
-        ring(Z_CEIL - 4.02);                                              // under the top plate
+        ring(Z_LIP - 4.02);                                               // under the socket boss
         ring(Z_SHADE + SHADE_PLATE + 0.01);                               // on the shade
     }
     color([1, 1, 0.85, 0.6]) hull() {                                      // A60 LED bulb

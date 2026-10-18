@@ -7,6 +7,6 @@ R="xvfb-run -a openscad -q --imgsize=1200,1000 --colorscheme=Tomorrow --autocent
 $R -D 'PART="assembly"' --camera=0,0,0,62,0,-30,0 -o images/designer_base_assembly.png designer_lamp_base.scad
 $R -D 'PART="exploded"' --camera=0,0,0,70,0,-30,0 -o images/designer_base_exploded.png designer_lamp_base.scad
 $R -D 'PART="section"' --camera=0,0,0,80,0,90,0 -o images/designer_base_section.png designer_lamp_base.scad
-$R -D 'PART="body"' --camera=0,0,0,50,0,-30,0 -o images/designer_base_body_print.png designer_lamp_base.scad
-$R -D 'PART="body"' --camera=0,0,0,235,0,-20,0 -o images/designer_base_body_top.png designer_lamp_base.scad
-$R -D 'PART="cap"' --camera=0,0,0,200,0,-20,0 -o images/designer_base_cap_underside.png designer_lamp_base.scad
+$R --render -D 'PART="body"' --camera=0,0,0,50,0,-30,0 -o images/designer_base_body_print.png designer_lamp_base.scad
+$R --render -D 'PART="body"' --camera=0,0,0,235,0,-20,0 -o images/designer_base_body_top.png designer_lamp_base.scad
+$R --render -D 'PART="cap"' --camera=0,0,0,200,0,-20,0 -o images/designer_base_cap_underside.png designer_lamp_base.scad

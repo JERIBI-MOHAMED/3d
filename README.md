@@ -47,25 +47,45 @@ re-exports STLs + previews.
 
 | Part | STL | Print |
 |---|---|---|
-| Body D150 x 37 (5 mm top plate, 41 mm socket hole) | `designer_base_body.stl` | exported **upside down** (top face on the bed): no supports, 3 walls, 15 % infill |
-| Bottom cap D150 x 3 | `designer_base_cap.stl` | as exported (feet recesses on the bed) |
+| Body D150 x 37 (1.8 mm walls, 1.6 mm top plate + 6 ribs, 5 mm socket boss) | `designer_base_body.stl` | exported **upside down** (top face on the bed), no supports |
+| Bottom cap D150 x 1.6 with honeycomb vents | `designer_base_cap.stl` | as exported (feet recesses on the bed) |
 | Cable clamp 26 x 7 x 5 | `designer_base_clamp.stl` | flat, groove up |
 | Centering bushing D58 / D44.2 x 4 | `designer_base_bushing.stl` | flange down |
 | All parts on one bed (310 x 238, K2 Pro) | `designer_base_plate.stl` | |
 
 Hardware: **fully threaded E27 socket with 2 rings** (40 mm thread), 2-core 0.75 mm2 cable with an inline switch and
-plug, 4 x M3x10 countersunk (cap), 2 x M3x16 pan head (clamp), 4 x rubber feet 10 mm. **LED bulb only** (shade walls
-0.5 mm PLA).
+plug, 4 x M3x8 countersunk (cap), 2 x M3x16 pan head (clamp), 4 x self-adhesive rubber feet 10 mm.
+**LED bulb only** (shade walls 0.5 mm PLA).
 
 Assembly
 1. Feed the cable in through the rear hole, lay it in the groove under the saddle, put the clamp under it (groove up)
    and screw the 2 M3x16 upwards into the saddle. The cable must not pull out (strain relief).
 2. Wire the socket (brown = live, blue = neutral), screw one ring on its thread and push it **from below** through
-   the 41 mm hole so that ring sits under the top plate.
+   the 41 mm hole so that ring sits under the socket boss.
 3. Slide the bushing (flange down) over the thread, then the shade: its 45 mm hole centers on the bushing sleeve.
-4. Screw the second ring on top: it clamps top plate (5) + bushing flange (1.5) + shade plate (3). Screw the cap on.
+4. Screw the second ring on top: it clamps boss (5) + bushing flange (1.5) + shade plate (3). Screw the cap on.
 
 Fit checks (real shade mesh + OpenSCAD booleans): shade 0 interference with body and bushing and in contact
-(0.1 mm lower collides), sleeve/hole clearance 0.32 mm per side, shade foot fully on the D140 top, socket 0
-interference with the hole, clamp 0 interference with the wall. Printed upside down the body has no overhang
-steeper than 45 deg except the 7 mm cable hole ceiling.
+(0.1 mm lower collides), sleeve/hole clearance 0.32 mm per side, shade foot fully on the D140 top, socket, clamp and
+cap 0 interference with the body, no inner feature crosses the outer skin. Printed upside down the body has no
+overhang steeper than 45 deg except the 7 mm cable hole ceiling.
+
+## Print time and filament
+
+Sliced with PrusaSlicer using the K2 Pro project speeds (0.2 mm, 2 walls, 15 % grid; the K2 itself is a bit faster):
+
+| | Before | Now |
+|---|---|---|
+| Shade, project settings (tree supports on) | 4 h 46, 115 g | **1 h 58, 52 g** with supports **off** |
+| Shade in spiral-vase mode (1 wall, 15 bottom layers, no top) | | **1 h 31, 57 g** |
+| Base body | 2 h 17, 103 g | **1 h 45, 80 g** (1 h 25 at 0.28 mm) |
+| Base cap | 1 h 08, 43 g | **42 min, 27 g** |
+| Bushing + clamp | 8 min, 4 g | 8 min, 4 g (unchanged) |
+
+Why: the shade's tree supports alone were 63 g and ~2 h 50 (the twisted 0.5 mm wall leans ~55 deg, which triggers
+auto supports, but it prints fine without them, like the original); full-size solid plates were the rest. The top
+plate and cap are now exactly 3 bottom + 5 top layers thick at 0.2 mm, so the slicer never puts sparse infill and a
+slow "bridge over infill" layer inside them; keep those layer counts if you change the layer height.
+
+Slicer tips: shade **supports off** (or vase mode), brim on (tall thin part), keep the overhang slowdown for quality;
+base and cap can use 0.28 mm layers and 2 walls (the top face is printed on the bed, so it stays smooth).
