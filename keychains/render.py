@@ -19,14 +19,14 @@ MM = 0.001
 # id, x, y, rotation, key ring?
 SCENES = {
     # target is the point the camera looks at; a target above the items leaves room for a headline
-    "hero": {"bg": "#EFE4D2", "target": (0, 2), "dist": 0.50, "elev": 62, "azim": -90, "items": [
+    "hero": {"bg": "#EFE4D2", "target": (2, 6), "dist": 0.60, "elev": 62, "azim": -90, "items": [
         ("flag_tunisia", -34, 24, -14, True), ("khomsa", 42, 26, -8, False),
         ("name_ahmed", -26, -14, 6, False), ("jersey_red_yellow", 46, -24, 12, False),
         ("name_yasmine_ar", -30, -42, -5, False), ("heart_initials", 18, -78, -8, False)]},
     "names": {"bg": "#F3E9DD", "target": (0, 22), "dist": 0.40, "elev": 64, "azim": -90, "items": [
         ("name_yasmine", -8, 36, -5, True), ("name_yasmine_ar", 10, 11, 4, True),
         ("name_ahmed", -8, -14, -3, True), ("name_ahmed_ar", 14, -40, 5, True)]},
-    "souvenir": {"bg": "#E6EEF2", "target": (0, 24), "dist": 0.36, "elev": 62, "azim": -90, "items": [
+    "souvenir": {"bg": "#E6EEF2", "target": (2, 10), "dist": 0.35, "elev": 62, "azim": -90, "items": [
         ("flag_tunisia", -14, -26, -10, True), ("khomsa", 20, 14, 8, False)]},
     "jerseys": {"bg": "#ECEEF0", "target": (0, 14), "dist": 0.47, "elev": 62, "azim": -90, "items": [
         ("jersey_red_white", -46, -6, -10, True), ("jersey_red_yellow", 0, -16, 0, True),

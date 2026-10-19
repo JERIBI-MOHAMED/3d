@@ -20,20 +20,25 @@ const PRICES = [                      // <- your prices (TND)
   ['Prénom personnalisé (arabe ou français)', '10 DT'],
   ['Pack de 3 au choix', '20 DT'],
   ['Pack de 5 au choix', '30 DT'],
-  ['Mariage / événements (min. 30 pièces)', 'dès 3 DT/pièce'],
+  ['Mariage (min. 30 pièces)', 'dès 3 DT'],
 ];
 
+const FLAG = `<svg viewBox="0 0 30 20" width="42" height="28" style="vertical-align:-5px;margin-left:8px;border-radius:3px">
+<rect width="30" height="20" fill="#E70013"/><circle cx="15" cy="10" r="5" fill="#fff"/>
+<circle cx="15" cy="10" r="3.75" fill="#E70013"/><circle cx="15.94" cy="10" r="3" fill="#fff"/>
+<polygon fill="#E70013" points="${[...Array(10)].map((_, i) => { const r = i % 2 ? 0.72 : 1.8, a = Math.PI + i * Math.PI / 5; return `${(16.1 + r * Math.cos(a)).toFixed(2)},${(10 + r * Math.sin(a)).toFixed(2)}`; }).join(' ')}"/></svg>`;
+
 const POSTS = [
-  { id: 'hero', render: 'hero', kicker: 'Fait en Tunisie 🇹🇳', title: 'Porte-clés<br>imprimés en 3D',
+  { id: 'hero', render: 'hero', kicker: `Fait en Tunisie${FLAG}`, title: 'Porte-clés<br>imprimés en 3D',
     sub: 'Personnalisés · solides · multicolores', badge: 'dès 7 DT' },
   { id: 'names', render: 'names', kicker: 'Personnalisé', title: 'Ton prénom, en arabe<br>ou en français',
-    ar: 'اسمك بالعربي ولا بالفرنسي', badge: '10 DT' },
+    ar: 'اسمك بالعربي ولا بالفرنسي', badge: '10 DT', badgeLeft: true },
   { id: 'souvenir', render: 'souvenir', kicker: 'Souvenirs de Tunisie', title: 'Khomsa & drapeau',
     sub: 'Le cadeau parfait pour la famille à l’étranger', badge: '7 DT' },
   { id: 'jerseys', render: 'jerseys', kicker: 'Pour les supporters', title: 'Les couleurs<br>de ton club',
     sub: 'Choisis tes couleurs + ton numéro', badge: '8 DT' },
   { id: 'wedding', render: 'wedding', kicker: 'Mariage · Khotba · Sbou3', title: 'Cadeaux d’invités<br>personnalisés',
-    sub: 'Vos initiales, vos couleurs', badge: 'dès 3 DT / pièce' },
+    sub: 'Vos initiales, vos couleurs', badge: 'dès 3 DT / pièce', badgeLeft: true },
   { id: 'prices', render: 'hero', prices: true },
 ];
 
@@ -53,6 +58,7 @@ h1 { font-weight: 900; font-size: 92px; line-height: 1.02; margin-top: 22px; let
 .badge { position: absolute; right: 70px; bottom: 150px; background: #1d1d1f; color: #fff; font-weight: 900;
   font-size: 50px; padding: 14px 36px 18px; border-radius: 22px; transform: rotate(-4deg);
   box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+.badge.left { right: auto; left: 70px; transform: rotate(4deg); }
 .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 104px; background: #1d1d1f; color: #fff;
   display: flex; align-items: center; justify-content: space-between; padding: 0 70px;
   font-weight: 700; font-size: 31px; }
@@ -82,7 +88,7 @@ function html(p) {
     <div class="handle">${BRAND}</div>
     <div class="head"><span class="kicker">${p.kicker}</span><h1>${p.title}</h1>
       ${p.sub ? `<div class="sub">${p.sub}</div>` : ''}${p.ar ? `<div class="ar">${p.ar}</div>` : ''}</div>
-    <div class="badge">${p.badge}</div>${foot}</body></html>`;
+    <div class="badge${p.badgeLeft ? ' left' : ''}">${p.badge}</div>${foot}</body></html>`;
 }
 
 fs.mkdirSync(OUT, { recursive: true });
