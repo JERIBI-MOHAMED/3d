@@ -23,7 +23,7 @@ const PRICES = [                      // <- your prices (TND)
   ['Mariage (min. 30 pièces)', 'dès 3 DT'],
 ];
 
-const FLAG = `<svg viewBox="0 0 30 20" width="42" height="28" style="vertical-align:-5px;margin-left:8px;border-radius:3px">
+const FLAG = `<svg viewBox="0 0 30 20" width="42" height="28" style="vertical-align:-5px;margin-left:10px;border-radius:3px;box-shadow:0 0 0 2.5px #fff">
 <rect width="30" height="20" fill="#E70013"/><circle cx="15" cy="10" r="5" fill="#fff"/>
 <circle cx="15" cy="10" r="3.75" fill="#E70013"/><circle cx="15.94" cy="10" r="3" fill="#fff"/>
 <polygon fill="#E70013" points="${[...Array(10)].map((_, i) => { const r = i % 2 ? 0.72 : 1.8, a = Math.PI + i * Math.PI / 5; return `${(16.1 + r * Math.cos(a)).toFixed(2)},${(10 + r * Math.sin(a)).toFixed(2)}`; }).join(' ')}"/></svg>`;
