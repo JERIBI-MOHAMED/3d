@@ -1,0 +1,429 @@
+[
+ {
+  "id": "name_yasmine",
+  "label": "Yasmine",
+  "parts": [
+   {
+    "file": "keychain_name_yasmine_0_pink.stl",
+    "colour": "pink",
+    "hex": "#D9487A",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_name_yasmine_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 4.4
+   }
+  ],
+  "size_mm": [
+   71.3,
+   17.5,
+   4.4
+  ],
+  "bounds": [
+   -39.23252293177081,
+   -8.754903217365255,
+   32.033452429375245,
+   8.755
+  ],
+  "hole": [
+   -34.23279065595172,
+   4.363111743857345e-05
+  ],
+  "colour_change_at_mm": [
+   3.0
+  ]
+ },
+ {
+  "id": "name_yasmine_ar",
+  "label": "ياسمين",
+  "parts": [
+   {
+    "file": "keychain_name_yasmine_ar_0_turquoise.stl",
+    "colour": "turquoise",
+    "hex": "#1FA3A8",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_name_yasmine_ar_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 4.4
+   }
+  ],
+  "size_mm": [
+   65.6,
+   20.7,
+   4.4
+  ],
+  "bounds": [
+   -29.187298706541846,
+   -10.331952710964396,
+   36.38723227581912,
+   10.3325
+  ],
+  "hole": [
+   31.387499999999992,
+   0.0002642277105059799
+  ],
+  "colour_change_at_mm": [
+   3.0
+  ]
+ },
+ {
+  "id": "name_ahmed",
+  "label": "Ahmed",
+  "parts": [
+   {
+    "file": "keychain_name_ahmed_0_navy.stl",
+    "colour": "navy",
+    "hex": "#13294B",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_name_ahmed_1_yellow.stl",
+    "colour": "yellow",
+    "hex": "#F6C312",
+    "z0": 3.0,
+    "z1": 4.4
+   }
+  ],
+  "size_mm": [
+   61.5,
+   17.6,
+   4.4
+  ],
+  "bounds": [
+   -34.337063089708494,
+   -8.817760360222396,
+   27.14071428571429,
+   8.817857142857143
+  ],
+  "hole": [
+   -29.33733081388937,
+   4.3631117437933215e-05
+  ],
+  "colour_change_at_mm": [
+   3.0
+  ]
+ },
+ {
+  "id": "name_ahmed_ar",
+  "label": "أحمد",
+  "parts": [
+   {
+    "file": "keychain_name_ahmed_ar_0_black.stl",
+    "colour": "black",
+    "hex": "#1E1E22",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_name_ahmed_ar_1_gold.stl",
+    "colour": "gold",
+    "hex": "#D4A62A",
+    "z0": 3.0,
+    "z1": 4.4
+   }
+  ],
+  "size_mm": [
+   45.1,
+   21.5,
+   4.4
+  ],
+  "bounds": [
+   -18.950000000000003,
+   -10.76,
+   26.149732275819122,
+   10.75962789510849
+  ],
+  "hole": [
+   21.149999999999995,
+   -0.00016845456141387728
+  ],
+  "colour_change_at_mm": [
+   3.0
+  ]
+ },
+ {
+  "id": "flag_tunisia",
+  "label": "Drapeau Tunisie",
+  "parts": [
+   {
+    "file": "keychain_flag_tunisia_0_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_flag_tunisia_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 3.8
+   },
+   {
+    "file": "keychain_flag_tunisia_2_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 3.8,
+    "z1": 4.6
+   }
+  ],
+  "size_mm": [
+   55.0,
+   32.0,
+   4.6
+  ],
+  "bounds": [
+   -30.99973227581912,
+   -16.0,
+   24.0,
+   16.0
+  ],
+  "hole": [
+   -26.0,
+   8.999999999999998
+  ],
+  "colour_change_at_mm": [
+   3.0,
+   3.8
+  ]
+ },
+ {
+  "id": "khomsa",
+  "label": "Khomsa",
+  "parts": [
+   {
+    "file": "keychain_khomsa_0_blue.stl",
+    "colour": "blue",
+    "hex": "#1C4FA1",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_khomsa_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 3.8
+   },
+   {
+    "file": "keychain_khomsa_2_turquoise.stl",
+    "colour": "turquoise",
+    "hex": "#1FA3A8",
+    "z0": 3.8,
+    "z1": 4.6
+   },
+   {
+    "file": "keychain_khomsa_3_black.stl",
+    "colour": "black",
+    "hex": "#1E1E22",
+    "z0": 3.8,
+    "z1": 4.6
+   }
+  ],
+  "size_mm": [
+   45.0,
+   51.0,
+   4.6
+  ],
+  "bounds": [
+   -22.49767468601344,
+   -20.499853550291437,
+   22.49767468601344,
+   30.49973227581912
+  ],
+  "hole": [
+   -8.464698738625363e-17,
+   25.50000000000003
+  ],
+  "colour_change_at_mm": [
+   3.0,
+   3.8
+  ]
+ },
+ {
+  "id": "jersey_red_yellow",
+  "label": "Maillot 10",
+  "parts": [
+   {
+    "file": "keychain_jersey_red_yellow_0_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_jersey_red_yellow_1_yellow.stl",
+    "colour": "yellow",
+    "hex": "#F6C312",
+    "z0": 3.0,
+    "z1": 3.8
+   },
+   {
+    "file": "keychain_jersey_red_yellow_2_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 3.8,
+    "z1": 4.6
+   }
+  ],
+  "size_mm": [
+   43.4,
+   46.8,
+   4.6
+  ],
+  "bounds": [
+   -21.688856083460237,
+   0.0,
+   21.688856083460237,
+   46.799732275819125
+  ],
+  "hole": [
+   -6.873897398003905e-17,
+   41.800000000000004
+  ],
+  "colour_change_at_mm": [
+   3.0,
+   3.8
+  ]
+ },
+ {
+  "id": "jersey_red_white",
+  "label": "Maillot 7",
+  "parts": [
+   {
+    "file": "keychain_jersey_red_white_0_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_jersey_red_white_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 3.8
+   },
+   {
+    "file": "keychain_jersey_red_white_2_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 3.8,
+    "z1": 4.6
+   }
+  ],
+  "size_mm": [
+   43.4,
+   46.8,
+   4.6
+  ],
+  "bounds": [
+   -21.688856083460237,
+   0.0,
+   21.688856083460237,
+   46.799732275819125
+  ],
+  "hole": [
+   -6.873897398003905e-17,
+   41.800000000000004
+  ],
+  "colour_change_at_mm": [
+   3.0,
+   3.8
+  ]
+ },
+ {
+  "id": "jersey_white_red",
+  "label": "Maillot 9",
+  "parts": [
+   {
+    "file": "keychain_jersey_white_red_0_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_jersey_white_red_1_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 3.0,
+    "z1": 3.8
+   },
+   {
+    "file": "keychain_jersey_white_red_2_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.8,
+    "z1": 4.6
+   }
+  ],
+  "size_mm": [
+   43.4,
+   46.8,
+   4.6
+  ],
+  "bounds": [
+   -21.688856083460237,
+   0.0,
+   21.688856083460237,
+   46.799732275819125
+  ],
+  "hole": [
+   -6.873897398003905e-17,
+   41.800000000000004
+  ],
+  "colour_change_at_mm": [
+   3.0,
+   3.8
+  ]
+ },
+ {
+  "id": "heart_initials",
+  "label": "Y & A",
+  "parts": [
+   {
+    "file": "keychain_heart_initials_0_red.stl",
+    "colour": "red",
+    "hex": "#C8102E",
+    "z0": 0,
+    "z1": 3.0
+   },
+   {
+    "file": "keychain_heart_initials_1_white.stl",
+    "colour": "white",
+    "hex": "#F4F2EC",
+    "z0": 3.0,
+    "z1": 4.4
+   }
+  ],
+  "size_mm": [
+   46.4,
+   47.1,
+   4.4
+  ],
+  "bounds": [
+   -23.197946574364334,
+   -24.62185886537489,
+   23.197946574364334,
+   22.499732275819124
+  ],
+  "hole": [
+   -4.901164535078471e-17,
+   17.500000000000018
+  ],
+  "colour_change_at_mm": [
+   3.0
+  ]
+ }
+]

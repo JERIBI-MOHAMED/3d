@@ -37,3 +37,21 @@ opening walls (any desk thickness). Cables come up through the block and park in
 pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
+
+# Keychains for selling + Instagram posts (`keychains/`)
+
+Original designs (no licence issues): first names in Latin **and Arabic** (proper letter joining via HarfBuzz),
+Tunisian flag, khomsa with evil eye, club-colour jerseys with a number, wedding heart with initials.
+
+| Step | Command | Output |
+|---|---|---|
+| STLs | `python keychains/keychains.py` (edit `NAMES`, `JERSEYS`, `HEART_INITIALS`) | `stl/keychain_<design>_<layer>_<colour>.stl`, `keychains/parts.json` |
+| Renders | `python keychains/render.py stl keychains/renders` (needs `pip install bpy`) | `keychains/renders/render_*.png` |
+| Posts | `NODE_PATH=$(npm root -g) node keychains/compose.mjs` (edit `BRAND`, `PRICES`) | `keychains/instagram/post_*.png` + `captions.md` |
+
+Print notes
+- Every colour is a separate height band: base 0–3 mm, then 0.8 mm (or 1.4 mm text) layers on top.
+  On a single-nozzle printer add a filament change (M600 / "pause at height") at **3.0 mm** and, for
+  flag / khomsa / jerseys, at **3.8 mm**. On a multi-colour printer load all `_<n>_` files of a design as one object.
+- PLA, 0.2 mm layers, no supports, 15–20 % infill. Hole fits 25 mm split rings.
+- Font: Cairo (SIL Open Font License, `keychains/fonts/OFL.txt`).
