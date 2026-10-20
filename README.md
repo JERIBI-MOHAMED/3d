@@ -38,28 +38,39 @@ pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
 
-# CS Sfaxien keychain, 2 colors (`keychain/make_keychain.py`)
+# Football crest keychains, 2 colors (`keychain/make_keychain.py`)
 
-Made from `keychain/cs_sfaxien_logo.svg`. The black base is 3.2 mm thick: the shield, a 1.2 mm outline and a key-ring tab with a 4.5 mm hole. The white parts of the crest stand 0.8 mm proud on top of it: the rim, the stripes, "CSS" and the Arabic name.
-Finished size: **41.5 x 60.9 x 4.0 mm**. Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py`
+| | CS Sfaxien (`css`) | Club Africain (`ca`) |
+|---|---|---|
+| Colors | black base + white relief | red base + white relief |
+| Size | 41.5 x 60.9 x **4.0** mm | 41.9 x 60.9 x **4.2** mm |
+| Base / relief | 3.2 mm / 0.8 mm (4 layers) | 3.2 mm / 1.0 mm (5 layers, so the red does not show pink through the white) |
+| Source logo | `keychain/cs_sfaxien_logo.svg` | `keychain/club_africain_logo.svg` |
+| Preview | `images/css_keychain_preview.png` | `images/ca_keychain_preview.png` |
+
+Each keychain is a colored base: the shield, a 1.2 mm outline, and a key-ring tab with a 4.5 mm hole. The white parts of the crest stand raised on top.
+Regenerate after changing the parameters at the top of the script:
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|all]`
+
+Files in `stl/`, `<p>` = `css` or `ca`:
 
 | File | Use |
 |---|---|
-| `stl/css_keychain_2color.3mf` | **One object, two parts** (`black_base` + `white_relief`). Load it in Creality Print and give each part its own filament. |
-| `stl/css_keychain_black_base.stl` + `stl/css_keychain_white_relief.stl` | The same two parts as STLs. Select both, drag them in together and answer **Yes** to "load as a single object with multiple parts". |
-| `stl/css_keychain_single_color.stl` | Everything merged, for a one-color print or a manual filament swap. |
-| `images/css_keychain_preview.png` | Preview |
+| `<p>_keychain_2color.3mf` | **One object, two parts** (`black_base`/`red_base` + `white_relief`). Load it in Creality Print and give each part its own filament. |
+| `<p>_keychain_<color>_base.stl` + `<p>_keychain_white_relief.stl` | The same two parts as STLs. Select both, drag them in together and answer **Yes** to "load as a single object with multiple parts". |
+| `<p>_keychain_single_color.stl` | Everything merged, for a one-color print or a manual filament swap. |
 
-The Arabic text is 0.12 mm thicker per side than in the logo. Otherwise its strokes (about 0.2 mm) would be too thin for a 0.4 mm nozzle.
+Logo-specific fixes:
+- CS Sfaxien: the Arabic text is 0.12 mm thicker per side than in the logo. Otherwise its strokes (about 0.2 mm) would be too thin for a 0.4 mm nozzle.
+- Club Africain: the shapes are layered in the same order as the SVG. The stripes are cut to the shield shape (the SVG clip path), and the 8-unit stroke around it becomes a red band. At 50 mm every detail is at least 0.3 mm wide, so nothing is thickened.
 
 ## Printing on the Creality K2 SE (Creality Print, PLA, 0.4 nozzle)
 
-Print it flat, logo facing **up**. No supports and no brim.
+Printer profile **Creality K2 SE 0.4 nozzle**. Print flat, logo facing **up**, on the smooth or textured PEI plate. No supports and no brim.
 
 | Setting | Value |
 |---|---|
-| Process | 0.20 mm Standard (base = 16 layers, relief = 4 layers: the color change falls exactly on a layer) |
+| Process | **0.20 mm Standard**: base = 16 layers, so the color change falls exactly on a layer |
 | First layer | 0.20 mm, slow (default) |
 | Walls | 3, Arachne wall generator, "Detect thin walls" on |
 | Top / bottom layers | 5 / 4 |
@@ -67,10 +78,10 @@ Print it flat, logo facing **up**. No supports and no brim.
 | Outer wall speed | ~120 mm/s (keep "Slow down for small details" on, for the letters) |
 | Seam | Aligned or back |
 | Ironing (optional) | Top surfaces only. Gives a smoother, glossier white face |
-| Temps (generic PLA) | Nozzle 220 °C, bed 55-60 °C, smooth or textured PEI plate |
+| Temps (generic PLA) | Nozzle 220 °C, bed 55-60 °C (or just use your filament's preset, e.g. Hyper PLA) |
+| Plate capacity | About 15 keychains per plate (copy the object and auto-arrange) |
 
-**With a CFS (multicolor):** open the 3MF, set filament 1 = black and filament 2 = white, and assign `black_base` to 1 and `white_relief` to 2. There is only one color change, so leave purge at default and set the prime tower small (or turn on "flush into infill").
+**With a CFS (multicolor):** open `<p>_keychain_2color.3mf`. Set filament 1 = black (or red) and filament 2 = white. Assign the base part to 1 and `white_relief` to 2. There is only one color change per plate, so leave purge at default and set the prime tower small (or turn on "flush into infill").
 
-**Without a CFS (single spool, one swap):** slice `css_keychain_single_color.stl` and open the preview. Drag the layer slider to **3.40 mm**: this is the first layer that only prints the white details. Right-click the + and choose *Add pause* / *Change filament*. Start with black. When the printer pauses, swap to white and resume.
-
-The plate holds about 15 at once: copy the object and arrange.
+**Without a CFS (one spool, one swap):** slice `<p>_keychain_single_color.stl` and open the preview. Drag the layer slider to **3.40 mm**: this is the first layer that only prints the white details, and it's the same height for both keychains. Right-click the **+** and choose **Add pause**. Start with black (or red). When the printer pauses, unload, load white, purge until the white comes out clean, then resume.
+A CS Sfaxien and a Club Africain need different base colors, so print them on separate plates (or use the CFS with black, red and white).
