@@ -470,30 +470,50 @@ def extrude(g, h, z0):
     return trimesh.Trimesh(out.vert_properties[:, :3], out.tri_verts)
 
 
+# Filament slot of each color in Creality Print after syncing the CFS (1A white, 1B black, 1C -, 1D red)
+FILAMENT = {"white": 1, "black": 2, "red": 4}
+BED_CENTER = (110, 107.5)  # K2 SE bed 220 x 215 mm
+
+
 def write_3mf(path, title, parts):
-    """One object made of named parts (slicers load it as a multi-part object; set a filament per part)."""
-    res, comps = [], []
-    for i, (name, m) in enumerate(parts, start=1):
+    """One object made of named parts, each already assigned to its filament.
+
+    parts: [(name, mesh, filament)]. Metadata/model_settings.config holds the per-part "extruder"; OrcaSlicer
+    and Creality Print read it from any 3MF, so the parts open in their colors.
+    """
+    res, comps, cfg = [], [], []
+    for i, (name, m, filament) in enumerate(parts, start=1):
         v = "".join(f'<vertex x="{a:.4f}" y="{b:.4f}" z="{c:.4f}"/>' for a, b, c in m.vertices)
         t = "".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in m.faces)
         res.append(f'<object id="{i}" name="{name}" type="model"><mesh><vertices>{v}</vertices>'
                    f'<triangles>{t}</triangles></mesh></object>')
         comps.append(f'<component objectid="{i}"/>')
+        cfg.append(f'  <part id="{i}" subtype="normal_part">\n'
+                   f'   <metadata key="name" value="{name}"/>\n'
+                   f'   <metadata key="extruder" value="{filament}"/>\n'
+                   f'  </part>\n')
     oid = len(parts) + 1
     model = ('<?xml version="1.0" encoding="UTF-8"?>\n'
              '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
              f'<metadata name="Title">{title}</metadata><resources>' + "".join(res) +
              f'<object id="{oid}" name="{title.replace(" ", "_")}" type="model"><components>{"".join(comps)}</components></object>'
-             f'</resources><build><item objectid="{oid}" transform="1 0 0 0 1 0 0 0 1 128 128 0"/></build></model>')
+             f'</resources><build><item objectid="{oid}" transform="1 0 0 0 1 0 0 0 1 {BED_CENTER[0]} {BED_CENTER[1]} 0"/>'
+             '</build></model>')
+    settings = ('<?xml version="1.0" encoding="UTF-8"?>\n<config>\n'
+                f' <object id="{oid}">\n'
+                f'  <metadata key="name" value="{title}"/>\n'
+                f'  <metadata key="extruder" value="{parts[0][2]}"/>\n' + "".join(cfg) +
+                ' </object>\n</config>\n')
     ct = ('<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
           '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-          '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>')
+          '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+          '<Default Extension="config" ContentType="text/xml"/></Types>')
     rels = ('<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("[Content_Types].xml", ct)
-        z.writestr("_rels/.rels", rels)
-        z.writestr("3D/3dmodel.model", model)
+        for name, data in [("[Content_Types].xml", ct), ("_rels/.rels", rels), ("3D/3dmodel.model", model),
+                           ("Metadata/model_settings.config", settings)]:
+            z.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), data, zipfile.ZIP_DEFLATED)
 
 
 def preview(base, white, path, logo, thickness):
@@ -553,7 +573,8 @@ def make(key):
     white.export(f"{pre}_{top_name}.stl")
     if not flat:  # a flat keychain in one color would just be a plain disc
         single.export(f"{pre}_single_color.stl")
-    write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain", [(base_name, base), (top_name, white)])
+    write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain",
+              [(base_name, base, FILAMENT[logo["base"]]), (top_name, white, FILAMENT[logo["top"]])])
     preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, BASE_T + relief_t)
     for n, m in [("base", base), ("white", white), ("single", single)]:
         print(key, n, "watertight", m.is_watertight, "extents", np.round(m.extents, 2), "volume", round(m.volume, 1))

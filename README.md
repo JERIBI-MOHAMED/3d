@@ -57,7 +57,7 @@ Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
 | File | Use |
 |---|---|
-| `<p>_keychain_2color.3mf` | **One object, two parts** (`black_base`/`red_base` + `white_relief`/`red_relief`). Load it in Creality Print and give each part its own filament. |
+| `<p>_keychain_2color.3mf` | **Opens already in two colors**: one object with two parts whose filaments are preset for the CFS (**1 = white 1A, 2 = black 1B, 4 = red 1D**). Sync the CFS first so the filament list matches. Otherwise, **One object, two parts** (`black_base`/`red_base` + `white_relief`/`red_relief`). Load it in Creality Print and give each part its own filament. |
 | `<p>_keychain_<color>_base.stl` + `<p>_keychain_<color>_relief.stl` | The same two parts as STLs. Select both, drag them in together and answer **Yes** to "load as a single object with multiple parts". |
 | `<p>_keychain_single_color.stl` | Everything merged, for a one-color print or a manual filament swap. |
 
@@ -117,3 +117,5 @@ The top 5 layers hold both colors, so the filament changes on every one of those
    - **Ironing → Topmost surface**: both colors are ironed in the same plane, which gives a smooth flat face.
 4. Slice → Preview: black only up to 3.20 mm. From 3.40 to 4.20 mm, each layer prints black and white side by side. Send print.
 5. Tip: print several on one plate. The swaps are per layer, not per keychain, so 10 keychains cost the same purge as one.
+
+**Filament numbers in the 3MF files.** Each part is preset to a filament number: white = 1, black = 2, red = 4. This matches the CFS loaded as 1A white, 1B black, 1D red. If your slots differ, change the part's filament in the object list, or edit `FILAMENT` in `keychain/make_keychain.py` and regenerate. STL files cannot carry color, so use the 3MF.
