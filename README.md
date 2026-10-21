@@ -50,3 +50,15 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
   and it scales with the hand if you resize the object.
 - Print upright with the knob on the bed. A 5 mm brim is already set (the print is tall and narrow). Keep tree supports on for the hand.
   Use 3+ walls and 20 %+ infill for a strong stick; PETG bends before it breaks.
+
+# Stop sign paddle with the hand (`sign/make_stop_sign.py`)
+
+`sign/stop_sign.3mf` (Creality K2 SE project) / `sign/stop_sign.stl`: a red octagon stop sign with a white border, the
+middle-finger hand in white relief where "STOP" would be, and a handle (preview: `images/stop_sign_preview.png`).
+Regenerate with `python3 sign/make_stop_sign.py original_hand.3mf sign` (sizes at the top of the script).
+
+- Sign 130 mm flat to flat, 5 mm plate, border and hand raised up to 6 mm. Handle 22 x 11 mm, 100 mm long, with a wide
+  neck into the sign. Whole paddle 210 x 206 mm on the bed (turned 46 deg to fit), 11 mm tall. No supports needed.
+- Print flat as placed (back of the sign on the bed). Load **red**; the 3MF already has a **colour change at 5.2 mm**,
+  where the printer pauses so you swap to **white** for the border and the hand. The handle's top half also comes out
+  white. In the preview, check that the colour change is on the layer right above the red plate.
