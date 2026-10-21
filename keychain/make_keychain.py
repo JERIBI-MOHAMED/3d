@@ -8,6 +8,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   ca   Club Africain, red + white     -> stl/ca_keychain_*
   brand  Brand of Sacrifice (Berserk), black + red, cut-out shape -> stl/brand_keychain_*
   est  Esperance Sportive de Tunis, black + white (from the Illustrator file) -> stl/est_keychain_*
+  est_flat  the same crest with a flat top: white inlaid flush in the black (needs a multi-color unit, e.g. CFS)
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -438,6 +439,9 @@ LOGOS = {
     # 1.0 mm of white so the black base does not grey it
     "est": dict(name="Esperance Sportive de Tunis", crest=crest_est, base="black", top="white", relief_t=1.0,
                 colors=("#0d0d0d", "#f2f2f2")),
+    # flat top: the black body is full height and the white is inlaid 1.0 mm deep, flush with it
+    "est_flat": dict(name="Esperance Sportive de Tunis (flat)", crest=crest_est, base="black", top="white",
+                     relief_t=1.0, colors=("#0d0d0d", "#f2f2f2"), flat=True),
 }
 
 
@@ -534,16 +538,21 @@ def make(key):
     relief_t = logo["relief_t"]
     base = extrude(base2d, BASE_T, 0)
     white = extrude(white2d, relief_t, BASE_T)
+    flat = logo.get("flat", False)
+    if flat:
+        # black fills the top layer everywhere the white is not: one flat face, two colors in the same layers
+        base = trimesh.boolean.union([base, extrude(base2d.difference(white2d), relief_t, BASE_T)], engine="manifold")
     single = trimesh.boolean.union([base, white], engine="manifold")
     assert base.is_volume and white.is_volume and single.is_volume
     out = os.path.join(ROOT, "stl")
     os.makedirs(out, exist_ok=True)
     pre = os.path.join(out, f"{key}_keychain")
-    base_name = f"{logo['base']}_base"
+    base_name = f"{logo['base']}_body" if flat else f"{logo['base']}_base"
     base.export(f"{pre}_{base_name}.stl")
-    top_name = f"{logo['top']}_relief"
+    top_name = f"{logo['top']}_inlay" if flat else f"{logo['top']}_relief"
     white.export(f"{pre}_{top_name}.stl")
-    single.export(f"{pre}_single_color.stl")
+    if not flat:  # a flat keychain in one color would just be a plain disc
+        single.export(f"{pre}_single_color.stl")
     write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain", [(base_name, base), (top_name, white)])
     preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, BASE_T + relief_t)
     for n, m in [("base", base), ("white", white), ("single", single)]:

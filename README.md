@@ -51,7 +51,7 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
 The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|all]`
 
 Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
@@ -102,3 +102,18 @@ Keychains that share the same two colors can go on one plate (CS Sfaxien and Esp
    - Prime tower on (automatic), flush volumes at default or higher: black → white needs a full purge
 5. Slice → Preview: black up to **3.20 mm**, white only from **3.40 mm**; the mascot's eyes and the letters should show as separate lines. Send print.
 6. Without the CFS: slice `stl/est_keychain_single_color.stl`, add a **pause at 3.40 mm**, start in black, swap to white at the pause.
+
+### Esperance keychain, flat top (`est_flat`, needs the CFS)
+
+Same design, but the surface is **completely flat**: the white is inlaid 1.0 mm deep into a full-height black body (52.4 x 60.9 x 4.2 mm). Checked: the inlay fills the pockets exactly (areas match to 0.04 mm²), and both tops are at 4.2 mm.
+Files: `stl/est_flat_keychain_2color.3mf` (parts `black_body` + `white_inlay`), or the two STLs `est_flat_keychain_black_body.stl` + `est_flat_keychain_white_inlay.stl`.
+The top 5 layers hold both colors, so the filament changes on every one of those layers. That needs the CFS; a single pause cannot print it.
+
+1. Open `stl/est_flat_keychain_2color.3mf`. Printer **K2 SE 0.4**, process **0.20mm Standard**. Sync the CFS: 1A white, 1B black.
+2. Right-click `black_body` → **1B (black)**; right-click `white_inlay` → **1A (white)**.
+3. Same process settings as above (Arachne, detect thin walls, 3 walls, top 5 / bottom 4, 25 % gyroid, outer wall 100 mm/s), plus:
+   - **Prime tower on.** About 5 layers change color, so 5–6 swaps per plate.
+   - Flushing volumes: black → white at least the default. White → black can be lower.
+   - **Ironing → Topmost surface**: both colors are irons in the same plane, which gives a smooth flat face.
+4. Slice → Preview: black only up to 3.20 mm. From 3.40 to 4.20 mm, each layer prints black and white side by side. Send print.
+5. Tip: print several on one plate. The swaps are per layer, not per keychain, so 10 keychains cost the same purge as one.
