@@ -7,6 +7,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   css  CS Sfaxien, black + white      -> stl/css_keychain_*
   ca   Club Africain, red + white     -> stl/ca_keychain_*
   brand  Brand of Sacrifice (Berserk), black + red, cut-out shape -> stl/brand_keychain_*
+  est  Esperance Sportive de Tunis, black + white (from a PNG) -> stl/est_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -204,6 +205,111 @@ def crest_brand():
     return sym, roughen(sym)
 
 
+def thicken(mask, r):
+    """Raster: widen the thin lines of mask (narrower than 2r) to 2r.
+
+    The thin parts are what an opening removes. Small leftovers at corners are skipped, so corners stay sharp
+    instead of growing blobs; only elongated pieces (lines, gaps between letters) are widened.
+    """
+    import cv2
+    from scipy import ndimage as ndi
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+    m = mask.astype(np.uint8)
+    thin = (m & ~cv2.morphologyEx(m, cv2.MORPH_OPEN, k) & 1).astype(bool)
+    lab, n = ndi.label(thin, structure=np.ones((3, 3)))
+    if n:
+        area = ndi.sum(thin, lab, range(1, n + 1))
+        ext = ndi.find_objects(lab)
+        length = np.array([max(sl[0].stop - sl[0].start, sl[1].stop - sl[1].start) for sl in ext])
+        keep = np.r_[False, (length >= 3 * r) & (area >= 2 * r * r)]
+        thin = keep[lab]
+    return (m.astype(bool) | cv2.dilate(thin.astype(np.uint8), k).astype(bool))
+
+
+def mask_to_shapes(mask, px_mm, sigma=1.2):
+    """Raster mask -> smooth shapely geometry in mm (subpixel contours, even-odd nesting); y up."""
+    import cv2
+    from skimage import measure
+    m = np.pad(mask.astype(float), 2)
+    m = cv2.GaussianBlur(m, (0, 0), sigma)
+    rings = [Polygon(np.c_[c[:, 1] - 2, -(c[:, 0] - 2)] * px_mm).buffer(0)
+             for c in measure.find_contours(m, 0.5) if len(c) > 8]
+    g = Polygon()
+    for p in sorted(rings, key=lambda p: -p.area):
+        g = g.symmetric_difference(p)
+    return g.simplify(0.01)
+
+
+def arc_text(text, font, r_base, cap_h, a0, a1, tracking):
+    """Text along the bottom of a circle (centered at 0,0), read left to right, letter tops toward the center.
+
+    Spread between angles a0..a1 (degrees, a0 < a1, e.g. 195..345); letters are squeezed horizontally to fit.
+    """
+    from fontTools.ttLib import TTFont
+    from matplotlib.font_manager import FontProperties
+    from matplotlib.textpath import TextPath
+    tt = TTFont(font)
+    upm, cmap, hmtx = tt["head"].unitsPerEm, tt.getBestCmap(), tt["hmtx"]
+    h = TextPath((0, 0), "H", size=1, prop=FontProperties(fname=font)).get_extents()
+    em = cap_h / h.height
+    prop = FontProperties(fname=font)
+    glyphs, adv = [], []
+    for ch in text:
+        g = Polygon()
+        if ch != " ":
+            for ring in TextPath((0, 0), ch, size=em, prop=prop).to_polygons():
+                if len(ring) >= 3:
+                    g = g.symmetric_difference(Polygon(ring).buffer(0))
+        glyphs.append(g)
+        adv.append(hmtx[cmap[ord(ch)]][0] / upm * em)
+    arc = np.radians(a1 - a0) * (r_base - cap_h / 2)
+    sx = (arc - tracking * (len(text) - 1)) / sum(adv)
+    out, pos = [], 0.0
+    for g, a in zip(glyphs, adv):
+        w = a * sx
+        theta = np.radians(a0) + (pos + w / 2) / (r_base - cap_h / 2)
+        pos += w + tracking
+        if g.is_empty:
+            continue
+        g = affinity.scale(g, sx, 1, origin=(0, 0))
+        g = affinity.translate(g, -w / 2, 0)                     # centered on the baseline point
+        g = affinity.rotate(g, np.degrees(theta) + 90, origin=(0, 0))
+        out.append(affinity.translate(g, r_base * np.cos(theta), r_base * np.sin(theta)))
+    return unary_union(out), sx
+
+
+def crest_est():
+    """Esperance Sportive de Tunis from the PNG, two colors: yellow/gold/white/skin -> white, black/red -> black.
+
+    The bottom text is too condensed to print at this size, so it is re-lettered along the full bottom arc.
+    """
+    from PIL import Image
+    a = np.array(Image.open(os.path.join(HERE, "esperance_tunis_logo.png")).convert("RGBA")).astype(float)
+    pal = np.array([(35, 31, 32), (237, 28, 36),                                       # black, red
+                    (253, 197, 35), (255, 242, 0), (250, 215, 195), (255, 255, 255)])  # gold, yellow, skin, white
+    cls = np.argmin(((a[..., None, :3] - pal) ** 2).sum(-1), -1)
+    inside = a[..., 3] > 128
+    ys, xs = np.nonzero(inside)
+    cx, cy = (xs.min() + xs.max()) / 2, (ys.min() + ys.max()) / 2
+    radius_px = (xs.max() - xs.min() + 1) / 2
+    px_mm = SHIELD_H / 2 / radius_px
+    white = inside & (cls >= 2)
+    # clear the original bottom text: ring band r 590..718 px, angles 190..350 deg
+    yy, xx = np.mgrid[:a.shape[0], :a.shape[1]]
+    rr, ang = np.hypot(xx - cx, yy - cy), np.degrees(np.arctan2(-(yy - cy), xx - cx)) % 360
+    white &= ~((rr > 590) & (rr < 718) & (ang > 190) & (ang < 350))
+    black = thicken(inside & ~white, round(MIN_STROKE / 2 / px_mm))       # mascot outlines, gaps
+    white = thicken(inside & ~black, round(0.34 / 2 / px_mm)) & inside     # thin rims (Arachne prints 0.34)
+    g = mask_to_shapes(white, px_mm)
+    g = affinity.translate(g, -cx * px_mm, cy * px_mm)                     # logo center -> (0, 0)
+    text, _ = arc_text("ESPERANCE SPORTIVE DE TUNIS", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                       r_base=705 * px_mm, cap_h=3.1, a0=196, a1=344, tracking=0.32)
+    g = unary_union([g, text])
+    disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
+    tf = lambda geom: affinity.translate(geom, 0, -SHIELD_H / 2)          # top edge at y=0
+    return tf(disk), tf(g)
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -213,6 +319,9 @@ LOGOS = {
     # cut-out keychain: the base follows the symbol; the ring tab overlaps the stem tip for strength
     "brand": dict(name="Brand of Sacrifice", crest=crest_brand, base="black", top="red", relief_t=1.0,
                   colors=("#0d0d0d", "#c8101a"), border=1.5, tab_overlap=3.5),
+    # 1.0 mm of white so the black base does not grey it
+    "est": dict(name="Esperance Sportive de Tunis", crest=crest_est, base="black", top="white", relief_t=1.0,
+                colors=("#0d0d0d", "#f2f2f2")),
 }
 
 
