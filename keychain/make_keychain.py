@@ -206,20 +206,25 @@ def crest_brand():
 
 
 def thicken(g, r):
-    """Widen the thin lines of g (narrower than 2r) to 2r.
+    """Widen the thin lines of g (narrower than 2r) to about 2r.
 
-    The thin parts are what an opening removes. Small leftovers at corners are skipped, so corners stay sharp
-    instead of growing blobs; only elongated pieces (outlines, gaps between letters) are widened.
+    The thin parts are what an opening removes. Each one only grows by what it is missing (its mean width is
+    estimated from area and perimeter), so lines already close to 2r stay as they are. Small leftovers at
+    corners are skipped, so corners stay sharp instead of growing blobs.
     """
-    thin = g.difference(g.buffer(-r).buffer(r))
-    keep = []
+    thin = g.difference(g.buffer(-0.95 * r).buffer(0.95 * r))
+    grown = []
     for p in getattr(thin, "geoms", [thin]):
         if p.is_empty or p.area < 2 * r * r:
             continue
         x0, y0, x1, y1 = p.bounds
-        if max(x1 - x0, y1 - y0) >= 3 * r:
-            keep.append(p)
-    return unary_union([g] + [p.buffer(r) for p in keep])
+        if max(x1 - x0, y1 - y0) < 3 * r:
+            continue
+        mean_w = 2 * p.area / p.length
+        grow = r - mean_w / 2
+        if grow > 0.01:
+            grown.append(p.buffer(grow))
+    return unary_union([g] + grown)
 
 
 def _bezier(p0, p1, p2, p3, n=12):
@@ -231,8 +236,8 @@ def parse_ai3(fn):
     """Adobe Illustrator 3 (text PostScript) -> painted items in drawing order.
 
     Each item: dict(kind="fill"|"stroke", cmyk, width (pt), rings=[N x 2 arrays]). Fill + stroke paths ("b")
-    give a fill item and, when the outline color differs, a stroke item. Compound paths (*u .. *U) are
-    one fill (even-odd).
+    give a fill item and, when the outline color differs, a stroke item marked outline=True (the border of
+    a filled shape, e.g. an eye). Compound paths (*u .. *U) are one fill (even-odd).
     """
     items, fill, stroke, width = [], (0, 0, 0, 1), (0, 0, 0, 1), 1.0
     sub, cur, compound, started = [], [], None, False
@@ -283,7 +288,7 @@ def parse_ai3(fn):
             if op in "fFbB":
                 new.append(dict(kind="fill", cmyk=fill, width=0, rings=list(sub)))
             if op in "sS" or (op in "bB" and stroke != fill):
-                new.append(dict(kind="stroke", cmyk=stroke, width=width, rings=list(sub)))
+                new.append(dict(kind="stroke", cmyk=stroke, width=width, rings=list(sub), outline=op in "bB"))
             (compound if compound is not None else items).extend(new)
             sub = []
         elif op == "*u":
@@ -355,15 +360,24 @@ def crest_est():
     s = SHIELD_H / 2 / radius                       # pt -> mm
     tf = lambda g: affinity.scale(affinity.translate(g, -c.x, -c.y), s, s, origin=(0, 0))
     white = Polygon()
+    def filled(rings):
+        g = Polygon()
+        for r in rings:
+            if len(r) >= 3:
+                g = g.symmetric_difference(Polygon(r).buffer(0))
+        return g
+
     for it in items:
         if it["kind"] == "fill":
-            g = Polygon()
-            for r in it["rings"]:
-                if len(r) >= 3:
-                    g = g.symmetric_difference(Polygon(r).buffer(0))
+            g = filled(it["rings"])
         else:
             w = it["width"] if cmyk_is_light(it["cmyk"]) else max(it["width"], MIN_STROKE / s)
-            g = unary_union([LineString(r).buffer(w / 2) for r in it["rings"]])
+            if it.get("outline"):
+                # border of a filled shape: draw it outward only, so small shapes (eyes, teeth) keep their size
+                f = filled(it["rings"])
+                g = f.buffer(w).difference(f)
+            else:
+                g = unary_union([LineString(r).buffer(w / 2) for r in it["rings"]])
         g = tf(g)
         if cmyk_is_light(it["cmyk"]):
             p = g.centroid
