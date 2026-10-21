@@ -7,7 +7,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   css  CS Sfaxien, black + white      -> stl/css_keychain_*
   ca   Club Africain, red + white     -> stl/ca_keychain_*
   brand  Brand of Sacrifice (Berserk), black + red, cut-out shape -> stl/brand_keychain_*
-  est  Esperance Sportive de Tunis, black + white (from a PNG) -> stl/est_keychain_*
+  est  Esperance Sportive de Tunis, black + white (from the Illustrator file) -> stl/est_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -19,7 +19,7 @@ import numpy as np
 import svgelements as se
 import trimesh
 from shapely import affinity
-from shapely.geometry import Point, Polygon
+from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
@@ -205,39 +205,102 @@ def crest_brand():
     return sym, roughen(sym)
 
 
-def thicken(mask, r):
-    """Raster: widen the thin lines of mask (narrower than 2r) to 2r.
+def thicken(g, r):
+    """Widen the thin lines of g (narrower than 2r) to 2r.
 
     The thin parts are what an opening removes. Small leftovers at corners are skipped, so corners stay sharp
-    instead of growing blobs; only elongated pieces (lines, gaps between letters) are widened.
+    instead of growing blobs; only elongated pieces (outlines, gaps between letters) are widened.
     """
-    import cv2
-    from scipy import ndimage as ndi
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
-    m = mask.astype(np.uint8)
-    thin = (m & ~cv2.morphologyEx(m, cv2.MORPH_OPEN, k) & 1).astype(bool)
-    lab, n = ndi.label(thin, structure=np.ones((3, 3)))
-    if n:
-        area = ndi.sum(thin, lab, range(1, n + 1))
-        ext = ndi.find_objects(lab)
-        length = np.array([max(sl[0].stop - sl[0].start, sl[1].stop - sl[1].start) for sl in ext])
-        keep = np.r_[False, (length >= 3 * r) & (area >= 2 * r * r)]
-        thin = keep[lab]
-    return (m.astype(bool) | cv2.dilate(thin.astype(np.uint8), k).astype(bool))
+    thin = g.difference(g.buffer(-r).buffer(r))
+    keep = []
+    for p in getattr(thin, "geoms", [thin]):
+        if p.is_empty or p.area < 2 * r * r:
+            continue
+        x0, y0, x1, y1 = p.bounds
+        if max(x1 - x0, y1 - y0) >= 3 * r:
+            keep.append(p)
+    return unary_union([g] + [p.buffer(r) for p in keep])
 
 
-def mask_to_shapes(mask, px_mm, sigma=1.2):
-    """Raster mask -> smooth shapely geometry in mm (subpixel contours, even-odd nesting); y up."""
-    import cv2
-    from skimage import measure
-    m = np.pad(mask.astype(float), 2)
-    m = cv2.GaussianBlur(m, (0, 0), sigma)
-    rings = [Polygon(np.c_[c[:, 1] - 2, -(c[:, 0] - 2)] * px_mm).buffer(0)
-             for c in measure.find_contours(m, 0.5) if len(c) > 8]
-    g = Polygon()
-    for p in sorted(rings, key=lambda p: -p.area):
-        g = g.symmetric_difference(p)
-    return g.simplify(0.01)
+def _bezier(p0, p1, p2, p3, n=12):
+    t = np.linspace(0, 1, n + 1)[1:, None]
+    return (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3
+
+
+def parse_ai3(fn):
+    """Adobe Illustrator 3 (text PostScript) -> painted items in drawing order.
+
+    Each item: dict(kind="fill"|"stroke", cmyk, width (pt), rings=[N x 2 arrays]). Fill + stroke paths ("b")
+    give a fill item and, when the outline color differs, a stroke item. Compound paths (*u .. *U) are
+    one fill (even-odd).
+    """
+    items, fill, stroke, width = [], (0, 0, 0, 1), (0, 0, 0, 1), 1.0
+    sub, cur, compound, started = [], [], None, False
+
+    def end_sub():
+        nonlocal cur
+        if len(cur) >= 2:
+            sub.append(np.array(cur))
+        cur = []
+
+    for line in open(fn, encoding="latin-1"):
+        t = line.split()
+        if not t:
+            continue
+        if t[0] == "%%EndSetup":
+            started = True
+            continue
+        if not started or t[0].startswith("%"):
+            continue
+        op = t[-1]
+        try:
+            v = [float(x) for x in t[:-1]]
+        except ValueError:
+            continue
+        if op == "k" and len(v) == 4:
+            fill = tuple(v)
+        elif op == "K" and len(v) == 4:
+            stroke = tuple(v)
+        elif op == "w" and len(v) == 1:
+            width = v[0]
+        elif op == "m":
+            end_sub()
+            cur = [tuple(v)]
+        elif op in ("l", "L"):
+            cur.append(tuple(v))
+        elif op in ("c", "C", "v", "V", "y", "Y"):
+            p0 = np.array(cur[-1])
+            if op in "cC":
+                c1, c2, p3 = np.array(v[0:2]), np.array(v[2:4]), np.array(v[4:6])
+            elif op in "vV":
+                c1, c2, p3 = p0, np.array(v[0:2]), np.array(v[2:4])
+            else:
+                c1, c2, p3 = np.array(v[0:2]), np.array(v[2:4]), np.array(v[2:4])
+            cur += [tuple(p) for p in _bezier(p0, c1, c2, p3)]
+        elif op in ("f", "F", "b", "B", "s", "S", "n", "N"):
+            end_sub()
+            new = []
+            if op in "fFbB":
+                new.append(dict(kind="fill", cmyk=fill, width=0, rings=list(sub)))
+            if op in "sS" or (op in "bB" and stroke != fill):
+                new.append(dict(kind="stroke", cmyk=stroke, width=width, rings=list(sub)))
+            (compound if compound is not None else items).extend(new)
+            sub = []
+        elif op == "*u":
+            compound = []
+        elif op == "*U":
+            fills = [c for c in compound if c["kind"] == "fill"]
+            if fills:
+                items.append(dict(kind="fill", cmyk=fills[0]["cmyk"], width=0,
+                                  rings=[r for c in fills for r in c["rings"]]))
+            items += [c for c in compound if c["kind"] == "stroke"]
+            compound = None
+    return items
+
+
+def cmyk_is_light(c):
+    r, g, b = ((1 - x) * (1 - c[3]) for x in c[:3])
+    return 0.299 * r + 0.587 * g + 0.114 * b > 0.5
 
 
 def arc_text(text, font, r_base, cap_h, a0, a1, tracking):
@@ -279,35 +342,45 @@ def arc_text(text, font, r_base, cap_h, a0, a1, tracking):
 
 
 def crest_est():
-    """Esperance Sportive de Tunis from the PNG, two colors: yellow/gold/white/skin -> white, black/red -> black.
+    """Esperance Sportive de Tunis from the Illustrator file, in two colors.
 
-    The bottom text is too condensed to print at this size, so it is re-lettered along the full bottom arc.
+    Light colors (yellow, gold, skin, white) -> white; black, grey and red -> black. The mascot's hairline
+    outlines become 0.42 mm black lines. The bottom text is too condensed to print at this size, so it is
+    re-lettered along the full bottom arc.
     """
-    from PIL import Image
-    a = np.array(Image.open(os.path.join(HERE, "esperance_tunis_logo.png")).convert("RGBA")).astype(float)
-    pal = np.array([(35, 31, 32), (237, 28, 36),                                       # black, red
-                    (253, 197, 35), (255, 242, 0), (250, 215, 195), (255, 255, 255)])  # gold, yellow, skin, white
-    cls = np.argmin(((a[..., None, :3] - pal) ** 2).sum(-1), -1)
-    inside = a[..., 3] > 128
-    ys, xs = np.nonzero(inside)
-    cx, cy = (xs.min() + xs.max()) / 2, (ys.min() + ys.max()) / 2
-    radius_px = (xs.max() - xs.min() + 1) / 2
-    px_mm = SHIELD_H / 2 / radius_px
-    white = inside & (cls >= 2)
-    # clear the original bottom text: ring band r 590..718 px, angles 190..350 deg
-    yy, xx = np.mgrid[:a.shape[0], :a.shape[1]]
-    rr, ang = np.hypot(xx - cx, yy - cy), np.degrees(np.arctan2(-(yy - cy), xx - cx)) % 360
-    white &= ~((rr > 590) & (rr < 718) & (ang > 190) & (ang < 350))
-    black = thicken(inside & ~white, round(MIN_STROKE / 2 / px_mm))       # mascot outlines, gaps
-    white = thicken(inside & ~black, round(0.34 / 2 / px_mm)) & inside     # thin rims (Arachne prints 0.34)
-    g = mask_to_shapes(white, px_mm)
-    g = affinity.translate(g, -cx * px_mm, cy * px_mm)                     # logo center -> (0, 0)
-    text, _ = arc_text("ESPERANCE SPORTIVE DE TUNIS", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                       r_base=705 * px_mm, cap_h=3.1, a0=196, a1=344, tracking=0.32)
-    g = unary_union([g, text])
+    items = parse_ai3(os.path.join(HERE, "esperance_tunis_logo.ai"))
+    outer = Polygon(items[0]["rings"][0])          # first shape: the outer yellow rim
+    c = outer.centroid
+    radius = (outer.bounds[2] - outer.bounds[0]) / 2
+    s = SHIELD_H / 2 / radius                       # pt -> mm
+    tf = lambda g: affinity.scale(affinity.translate(g, -c.x, -c.y), s, s, origin=(0, 0))
+    white = Polygon()
+    for it in items:
+        if it["kind"] == "fill":
+            g = Polygon()
+            for r in it["rings"]:
+                if len(r) >= 3:
+                    g = g.symmetric_difference(Polygon(r).buffer(0))
+        else:
+            w = it["width"] if cmyk_is_light(it["cmyk"]) else max(it["width"], MIN_STROKE / s)
+            g = unary_union([LineString(r).buffer(w / 2) for r in it["rings"]])
+        g = tf(g)
+        if cmyk_is_light(it["cmyk"]):
+            p = g.centroid
+            ang = np.degrees(np.arctan2(p.y, p.x)) % 360
+            if 0.79 < np.hypot(p.x, p.y) / (SHIELD_H / 2) < 0.965 and 190 < ang < 350:
+                continue                                 # original bottom text, re-lettered below
+            white = white.union(g)
+        else:
+            white = white.difference(g)
     disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
-    tf = lambda geom: affinity.translate(geom, 0, -SHIELD_H / 2)          # top edge at y=0
-    return tf(disk), tf(g)
+    black = thicken(disk.difference(white), MIN_STROKE / 2)  # gaps and lines the nozzle must keep open
+    white = thicken(disk.difference(black), 0.17).intersection(disk)  # thin rims (Arachne prints 0.34)
+    text, _ = arc_text("ESPERANCE SPORTIVE DE TUNIS", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                       r_base=0.947 * SHIELD_H / 2, cap_h=3.1, a0=196, a1=344, tracking=0.32)
+    white = unary_union([white, text])
+    top = lambda g: affinity.translate(g, 0, -SHIELD_H / 2)          # top edge at y=0
+    return top(disk), top(white)
 
 
 LOGOS = {
