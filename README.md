@@ -114,6 +114,6 @@ The top 5 layers hold both colors, so the filament changes on every one of those
 3. Same process settings as above (Arachne, detect thin walls, 3 walls, top 5 / bottom 4, 25 % gyroid, outer wall 100 mm/s), plus:
    - **Prime tower on.** About 5 layers change color, so 5–6 swaps per plate.
    - Flushing volumes: black → white at least the default. White → black can be lower.
-   - **Ironing → Topmost surface**: both colors are irons in the same plane, which gives a smooth flat face.
+   - **Ironing → Topmost surface**: both colors are ironed in the same plane, which gives a smooth flat face.
 4. Slice → Preview: black only up to 3.20 mm. From 3.40 to 4.20 mm, each layer prints black and white side by side. Send print.
 5. Tip: print several on one plate. The swaps are per layer, not per keychain, so 10 keychains cost the same purge as one.
