@@ -9,6 +9,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   brand  Brand of Sacrifice (Berserk), black + red, cut-out shape -> stl/brand_keychain_*
   est  Esperance Sportive de Tunis, black + white (from the Illustrator file) -> stl/est_keychain_*
   est_flat  the same crest with a flat top: white inlaid flush in the black (needs a multi-color unit, e.g. CFS)
+  moon  moon with sigil, black + white (from a black/white image) -> stl/moon_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -427,6 +428,57 @@ def crest_est():
     return top(disk), top(white)
 
 
+def mask_to_shapes(mask, px_mm, sigma=1.0):
+    """Raster mask -> smooth shapely geometry in mm (subpixel contours, even-odd nesting); y up."""
+    import cv2
+    from skimage import measure
+    m = cv2.GaussianBlur(np.pad(mask.astype(float), 2), (0, 0), sigma)
+    rings = [Polygon(np.c_[c[:, 1] - 2, -(c[:, 0] - 2)] * px_mm).buffer(0)
+             for c in measure.find_contours(m, 0.5) if len(c) > 8]
+    g = Polygon()
+    for p in sorted(rings, key=lambda p: -p.area):
+        g = g.symmetric_difference(p)
+    return g.simplify(0.01)
+
+
+def crest_moon():
+    """Moon with the sigil, from a black-and-white image.
+
+    The sigil is drawn inverted where it crosses the dark maria (white strokes on black), so it is kept as part of
+    the image. The moon texture is cleaned to what a 0.4 mm nozzle prints: specks under 0.45 x 0.45 mm and lines
+    under 0.37 mm (both colors) are dropped; the sigil's 0.7-0.8 mm strokes are untouched.
+    """
+    import cv2
+    from PIL import Image
+    from scipy import ndimage as ndi
+    g = np.array(Image.open(os.path.join(HERE, "moon_logo.webp")).convert("L"))
+    ys, xs = np.nonzero(g < 128)
+    (cx, cy), radius = cv2.minEnclosingCircle(np.c_[xs, ys].astype(np.float32))  # the moon's black outer edge
+    px_mm = SHIELD_H / (2 * radius)
+    yy, xx = np.mgrid[:g.shape[0], :g.shape[1]]
+    disk = np.hypot(xx - cx, yy - cy) < radius
+
+    def drop_small(m, min_area):
+        lab, n = ndi.label(m)
+        if n == 0:
+            return m
+        return np.r_[False, ndi.sum(m, lab, range(1, n + 1)) >= min_area][lab]
+
+    min_area = (0.45 / px_mm) ** 2
+    r = int(round(MIN_STROKE * 0.88 / 2 / px_mm))
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+    white = (g >= 128) & disk
+    for _ in range(2):
+        white = drop_small(white, min_area)
+        white = ~drop_small(~white & disk, min_area) & disk
+        white = cv2.morphologyEx(white.astype(np.uint8), cv2.MORPH_OPEN, k).astype(bool)
+        white = cv2.morphologyEx(white.astype(np.uint8), cv2.MORPH_CLOSE, k).astype(bool) & disk
+    shapes = affinity.translate(mask_to_shapes(white, px_mm), -cx * px_mm, cy * px_mm)
+    circle = Point(0, 0).buffer(SHIELD_H / 2, 256)
+    top = lambda geom: affinity.translate(geom, 0, -SHIELD_H / 2)     # top edge at y=0
+    return top(circle), top(shapes.intersection(circle))
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -442,6 +494,8 @@ LOGOS = {
     # flat top: the black body is full height and the white is inlaid 1.0 mm deep, flush with it
     "est_flat": dict(name="Esperance Sportive de Tunis (flat)", crest=crest_est, base="black", top="white",
                      relief_t=1.0, colors=("#0d0d0d", "#f2f2f2"), flat=True),
+    "moon": dict(name="Moon", crest=crest_moon, base="black", top="white", relief_t=1.0,
+                 colors=("#0d0d0d", "#f2f2f2")),
 }
 
 

@@ -51,7 +51,7 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
 The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|all]`
 
 Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
@@ -119,3 +119,10 @@ The top 5 layers hold both colors, so the filament changes on every one of those
 5. Tip: print several on one plate. The swaps are per layer, not per keychain, so 10 keychains cost the same purge as one.
 
 **Filament numbers in the 3MF files.** Each part is preset to a filament number: white = 1, black = 2, red = 4. This matches the CFS loaded as 1A white, 1B black, 1D red. If your slots differ, change the part's filament in the object list, or edit `FILAMENT` in `keychain/make_keychain.py` and regenerate. STL files cannot carry color, so use the 3MF.
+
+### Moon keychain (`moon`)
+
+Ø50 mm moon with the sigil, 52.4 x 60.9 x 4.2 mm: 3.2 mm black base, white raised 1.0 mm. Source: `keychain/moon_logo.webp`.
+The sigil is drawn inverted in the image: black strokes on the light moon, white strokes where it crosses the dark maria. So it's kept as part of the image, not redrawn. Its 0.7-0.8 mm strokes print as they are.
+The moon texture is cleaned to what a 0.4 mm nozzle prints: specks under 0.45 x 0.45 mm and lines thinner than 0.37 mm (either color) are dropped.
+Print exactly like the raised Esperance keychain: `stl/moon_keychain_2color.3mf` opens with `black_base` on filament 2 (black) and `white_relief` on filament 1 (white). There's one change, at 3.40 mm.
