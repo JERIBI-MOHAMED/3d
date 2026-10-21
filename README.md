@@ -37,3 +37,16 @@ opening walls (any desk thickness). Cables come up through the block and park in
 pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
+
+# Hand sign on a stick (`sign/`)
+
+`sign/middle_finger_sign.3mf` is the hand model with a handle stick added underneath, so you can hold it up like a sign
+(preview: `images/hand_sign_preview.png`). Regenerate it from the original 3MF with
+`python3 sign/add_stick.py original.3mf sign/middle_finger_sign.3mf` (sizes are at the top of the script).
+
+- Total height 155 mm: hand 35 mm (scale 0.35, unchanged) on a 120 mm stick. The stick is 8 mm wide under the wrist,
+  widens to 12 mm at the grip, and ends in a 16 mm rounded knob that sits on the bed.
+- The stick goes 6 mm up inside the wrist. It is a second part of the same object, so the slicer merges it with the hand
+  and it scales with the hand if you resize the object.
+- Print upright with the knob on the bed. A 5 mm brim is already set (the print is tall and narrow). Keep tree supports on for the hand.
+  Use 3+ walls and 20 %+ infill for a strong stick; PETG bends before it breaks.
