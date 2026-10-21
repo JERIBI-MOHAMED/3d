@@ -3,10 +3,11 @@
 python3 keychain/make_keychain.py [css|ca|all]
 (needs: pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy)
 
-Colored base (shield + outline + key-ring tab) with the white parts of the crest raised on top.
+Colored base (shield + outline + key-ring tab) with the crest's details raised on top in a second color.
   css  CS Sfaxien, black + white      -> stl/css_keychain_*
   ca   Club Africain, red + white     -> stl/ca_keychain_*
-Each writes <prefix>_<base>_base.stl, <prefix>_white_relief.stl, <prefix>_single_color.stl,
+  brand  Brand of Sacrifice (Berserk), black + red, cut-out shape -> stl/brand_keychain_*
+Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
 import os
@@ -18,6 +19,7 @@ import svgelements as se
 import trimesh
 from shapely import affinity
 from shapely.geometry import Point, Polygon
+from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -132,21 +134,95 @@ def crest_ca():
     return shield, shield.difference(tf(red))
 
 
+def _isect(p, d, q, e):
+    """Intersection of the lines p + t*d and q + s*e."""
+    return p + np.linalg.solve(np.array([d, -e]).T, q - p)[0] * d
+
+
+def thick_polyline(pts, widths, tips=(0, 0)):
+    """Centerline polyline -> polygon with one width per segment, mitred joins and pointed ends."""
+    pts = [np.array(p, float) for p in pts]
+    dirs = [(b - a) / np.linalg.norm(b - a) for a, b in zip(pts, pts[1:])]
+    nors = [np.array([-d[1], d[0]]) for d in dirs]
+    sides = []
+    for sgn in (1, -1):
+        line = [pts[0] + sgn * nors[0] * widths[0] / 2]
+        for i in range(1, len(pts) - 1):
+            line.append(_isect(pts[i] + sgn * nors[i - 1] * widths[i - 1] / 2, dirs[i - 1],
+                               pts[i] + sgn * nors[i] * widths[i] / 2, dirs[i]))
+        line.append(pts[-1] + sgn * nors[-1] * widths[-1] / 2)
+        sides.append(line)
+    ring = list(sides[0])
+    if tips[1]:
+        ring.append(pts[-1] + dirs[-1] * tips[1])
+    ring += sides[1][::-1]
+    if tips[0]:
+        ring.append(pts[0] - dirs[0] * tips[0])
+    return Polygon(ring).buffer(0)
+
+
+def roughen(g, seed=7, amp=0.09, corr=0.45, bite_every=2.5, bite_depth=(0.12, 0.35), bite_w=(0.3, 0.7)):
+    """Hand-carved edge: smooth random wobble plus small chips, pushed inward (mm)."""
+    rng = np.random.default_rng(seed)
+    step = 0.05
+
+    def ring_xy(line):
+        n = max(int(line.length / step), 16)
+        pts = np.array([line.interpolate(t).coords[0] for t in np.linspace(0, line.length, n, endpoint=False)])
+        nxt, prv = np.roll(pts, -1, 0), np.roll(pts, 1, 0)
+        tang = nxt - prv
+        out = np.c_[tang[:, 1], -tang[:, 0]]  # right-hand normal = out of the material (orient(g, 1))
+        out /= np.linalg.norm(out, axis=1)[:, None]
+        noise = rng.normal(size=n)
+        k = np.exp(-0.5 * (np.arange(-3 * int(corr / step), 3 * int(corr / step) + 1) * step / corr) ** 2)
+        noise = np.convolve(np.r_[noise[-len(k):], noise, noise[:len(k)]], k / k.sum(), "same")[len(k):-len(k)]
+        d = noise / noise.std() * amp - amp
+        s_pos = np.arange(n) * step
+        for _ in range(int(line.length / bite_every)):
+            c, w, dep = rng.uniform(0, line.length), rng.uniform(*bite_w), rng.uniform(*bite_depth)
+            dist = np.abs((s_pos - c + line.length / 2) % line.length - line.length / 2)
+            d -= dep * np.clip(1 - dist / (w / 2), 0, None)
+        return pts + out * d[:, None]
+
+    polys = []
+    for p in getattr(g, "geoms", [g]):
+        p = orient(p, 1)
+        polys.append(Polygon(ring_xy(p.exterior), [ring_xy(i) for i in p.interiors]).buffer(0))
+    return unary_union(polys)
+
+
+def crest_brand():
+    """Brand of Sacrifice, rebuilt as strokes measured from the hand-drawn reference (2x pixel coords)."""
+    P = dict(TL=(236, 108), UL=(85, 270), LR=(544, 668), BOT=(306, 913), LL=(81, 652), UR=(535, 284), TR=(384, 118))
+    WS, WX, WU, WL = 40, 38, 44, 62  # stem, X, upper arms, lower V
+    loop = thick_polyline([P["TL"], P["UL"], P["LR"], P["BOT"], P["LL"], P["UR"], P["TR"]],
+                          [WU, WX, WL, WL, WX, WU], tips=(22, 22))
+    stem = thick_polyline([(315, 95), (307, 900)], [WS], tips=(57, 0))
+    sym = unary_union([loop, stem])
+    tf = crest_transform(sym)
+    sym = tf(sym)
+    return sym, roughen(sym)
+
+
 LOGOS = {
-    "css": dict(name="CS Sfaxien", crest=crest_css, base="black", relief_t=0.8,
+    "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
     # 1.0 mm (5 layers) of white so the red base does not tint it pink
-    "ca": dict(name="Club Africain", crest=crest_ca, base="red", relief_t=1.0,
+    "ca": dict(name="Club Africain", crest=crest_ca, base="red", top="white", relief_t=1.0,
                colors=("#d40514", "#f4f4f4")),
+    # cut-out keychain: the base follows the symbol; the ring tab overlaps the stem tip for strength
+    "brand": dict(name="Brand of Sacrifice", crest=crest_brand, base="black", top="red", relief_t=1.0,
+                  colors=("#0d0d0d", "#c8101a"), border=1.5, tab_overlap=3.5),
 }
 
 
-def build_2d(crest):
-    shield, white = crest()
-    outline = shield.buffer(BORDER, join_style="round")
+def build_2d(logo):
+    shield, white = logo["crest"]()
+    outline = shield.buffer(logo.get("border", BORDER), join_style="round")
     top = outline.bounds[3]
-    tab = Point(0, top + TAB_R - 1.5).buffer(TAB_R, 128)
-    hole = Point(0, top + TAB_R - 1.5).buffer(HOLE_R, 128)
+    tab_y = top + TAB_R - logo.get("tab_overlap", 1.5)
+    tab = Point(0, tab_y).buffer(TAB_R, 128)
+    hole = Point(0, tab_y).buffer(HOLE_R, 128)
     base = unary_union([outline, tab]).difference(hole)
     white = white.intersection(shield)
     white = white.buffer(0.02).buffer(-0.02)  # fuse point contacts so the mesh stays manifold
@@ -229,7 +305,7 @@ def preview(base, white, path, logo, thickness):
 
 def make(key):
     logo = LOGOS[key]
-    base2d, white2d = build_2d(logo["crest"])
+    base2d, white2d = build_2d(logo)
     relief_t = logo["relief_t"]
     base = extrude(base2d, BASE_T, 0)
     white = extrude(white2d, relief_t, BASE_T)
@@ -240,9 +316,10 @@ def make(key):
     pre = os.path.join(out, f"{key}_keychain")
     base_name = f"{logo['base']}_base"
     base.export(f"{pre}_{base_name}.stl")
-    white.export(f"{pre}_white_relief.stl")
+    top_name = f"{logo['top']}_relief"
+    white.export(f"{pre}_{top_name}.stl")
     single.export(f"{pre}_single_color.stl")
-    write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain", [(base_name, base), ("white_relief", white)])
+    write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain", [(base_name, base), (top_name, white)])
     preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, BASE_T + relief_t)
     for n, m in [("base", base), ("white", white), ("single", single)]:
         print(key, n, "watertight", m.is_watertight, "extents", np.round(m.extents, 2), "volume", round(m.volume, 1))

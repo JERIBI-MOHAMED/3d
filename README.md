@@ -40,28 +40,30 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 
 # Football crest keychains, 2 colors (`keychain/make_keychain.py`)
 
-| | CS Sfaxien (`css`) | Club Africain (`ca`) |
-|---|---|---|
-| Colors | black base + white relief | red base + white relief |
-| Size | 41.5 x 60.9 x **4.0** mm | 41.9 x 60.9 x **4.2** mm |
-| Base / relief | 3.2 mm / 0.8 mm (4 layers) | 3.2 mm / 1.0 mm (5 layers, so the red does not show pink through the white) |
-| Source logo | `keychain/cs_sfaxien_logo.svg` | `keychain/club_africain_logo.svg` |
-| Preview | `images/css_keychain_preview.png` | `images/ca_keychain_preview.png` |
+| | CS Sfaxien (`css`) | Club Africain (`ca`) | Brand of Sacrifice, Berserk (`brand`) |
+|---|---|---|---|
+| Colors | black base + white relief | red base + white relief | black base + **red** relief |
+| Size | 41.5 x 60.9 x **4.0** mm | 41.9 x 60.9 x **4.2** mm | 32.1 x 59.5 x **4.2** mm |
+| Base / relief | 3.2 mm / 0.8 mm (4 layers) | 3.2 mm / 1.0 mm (5 layers, so the red does not show pink through the white) | 3.2 mm / 1.0 mm |
+| Source | `keychain/cs_sfaxien_logo.svg` | `keychain/club_africain_logo.svg` | rebuilt in code from a hand-drawn reference (no SVG) |
+| Preview | `images/css_keychain_preview.png` | `images/ca_keychain_preview.png` | `images/brand_keychain_preview.png` |
 
-Each keychain is a colored base: the shield, a 1.2 mm outline, and a key-ring tab with a 4.5 mm hole. The white parts of the crest stand raised on top.
+Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
+The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|all]`
 
-Files in `stl/`, `<p>` = `css` or `ca`:
+Files in `stl/`, `<p>` = `css`, `ca` or `brand`:
 
 | File | Use |
 |---|---|
-| `<p>_keychain_2color.3mf` | **One object, two parts** (`black_base`/`red_base` + `white_relief`). Load it in Creality Print and give each part its own filament. |
-| `<p>_keychain_<color>_base.stl` + `<p>_keychain_white_relief.stl` | The same two parts as STLs. Select both, drag them in together and answer **Yes** to "load as a single object with multiple parts". |
+| `<p>_keychain_2color.3mf` | **One object, two parts** (`black_base`/`red_base` + `white_relief`/`red_relief`). Load it in Creality Print and give each part its own filament. |
+| `<p>_keychain_<color>_base.stl` + `<p>_keychain_<color>_relief.stl` | The same two parts as STLs. Select both, drag them in together and answer **Yes** to "load as a single object with multiple parts". |
 | `<p>_keychain_single_color.stl` | Everything merged, for a one-color print or a manual filament swap. |
 
 Logo-specific fixes:
 - CS Sfaxien: the Arabic text is 0.12 mm thicker per side than in the logo. Otherwise its strokes (about 0.2 mm) would be too thin for a 0.4 mm nozzle.
+- Brand of Sacrifice: the drawing is a sketch with stippling, so the symbol is rebuilt from strokes (stem, X, upper arms, lower V) measured on the drawing. The red edges get a seeded "carved" roughness: a small wobble plus chips, at most 0.35 mm deep. The strokes stay about 1.5-2 mm wide; only the pointed tips are thinner. Change `seed` in `roughen()` for a different pattern.
 - Club Africain: the shapes are layered in the same order as the SVG. The stripes are cut to the shield shape (the SVG clip path), and the 8-unit stroke around it becomes a red band. At 50 mm every detail is at least 0.3 mm wide, so nothing is thickened.
 
 ## Printing on the Creality K2 SE (Creality Print, PLA, 0.4 nozzle)
@@ -81,7 +83,7 @@ Printer profile **Creality K2 SE 0.4 nozzle**. Print flat, logo facing **up**, o
 | Temps (generic PLA) | Nozzle 220 °C, bed 55-60 °C (or just use your filament's preset, e.g. Hyper PLA) |
 | Plate capacity | About 15 keychains per plate (copy the object and auto-arrange) |
 
-**With a CFS (multicolor):** open `<p>_keychain_2color.3mf`. Set filament 1 = black (or red) and filament 2 = white. Assign the base part to 1 and `white_relief` to 2. There is only one color change per plate, so leave purge at default and set the prime tower small (or turn on "flush into infill").
+**With a CFS (multicolor):** open `<p>_keychain_2color.3mf`. Set filament 1 = the base color (black/red) and filament 2 = the relief color (white, or red for the Brand). Assign the base part to 1 and the relief part to 2. There is only one color change per plate, so leave purge at default and set the prime tower small (or turn on "flush into infill").
 
-**Without a CFS (one spool, one swap):** slice `<p>_keychain_single_color.stl` and open the preview. Drag the layer slider to **3.40 mm**: this is the first layer that only prints the white details, and it's the same height for both keychains. Right-click the **+** and choose **Add pause**. Start with black (or red). When the printer pauses, unload, load white, purge until the white comes out clean, then resume.
-A CS Sfaxien and a Club Africain need different base colors, so print them on separate plates (or use the CFS with black, red and white).
+**Without a CFS (one spool, one swap):** slice `<p>_keychain_single_color.stl` and open the preview. Drag the layer slider to **3.40 mm**: this is the first layer that only prints the raised details, and it's the same height for all the keychains. Right-click the **+** and choose **Add pause**. Start with the base color. When the printer pauses, unload, load the relief color, purge until the white comes out clean, then resume.
+Keychains that share the same two colors can go on one plate (CS Sfaxien = black→white, Club Africain = red→white, Brand = black→red). Otherwise use separate plates, or the CFS with black, red and white.
