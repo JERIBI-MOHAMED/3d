@@ -64,7 +64,7 @@ Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 Logo-specific fixes:
 - CS Sfaxien: the Arabic text is 0.12 mm thicker per side than in the logo. Otherwise its strokes (about 0.2 mm) would be too thin for a 0.4 mm nozzle.
 - Brand of Sacrifice: the drawing is a sketch with stippling, so the symbol is rebuilt from strokes (stem, X, upper arms, lower V) measured on the drawing. The red edges get a seeded "carved" roughness: a small wobble plus chips, at most 0.35 mm deep. The strokes stay about 1.5-2 mm wide; only the pointed tips are thinner. Change `seed` in `roughen()` for a different pattern.
-- Esperance: built from the Illustrator file's vector shapes, parsed directly with no tracing, so every edge is exact. It's made black and white: yellow, gold, white and skin become white; black, grey and red become black. So the red stripes show as black stripes and the red crescents merge into the black ring. The mascot's hairline outlines (0.05 mm in the file) are drawn as 0.42 mm black lines. Outlines around filled shapes (eyes, teeth, face) are drawn outward only, so the white of the eyes and the teeth keep their full size. Black gaps narrower than 0.42 mm and white lines narrower than 0.34 mm are widened, each only by what it lacks, and corners are left sharp. The original bottom text is far too condensed to print at 50 mm, with letters under 1 mm wide. So "ESPERANCE SPORTIVE DE TUNIS" is re-lettered in DejaVu Sans Bold (squeezed to 63 % width) along the whole bottom of the ring, 3.1 mm tall.
+- Esperance: built from the Illustrator file's vector shapes, parsed directly with no tracing, so every edge is exact. It's made black and white: yellow, gold, white and skin become white; black, grey and red become black. So the red stripes show as black stripes and the red crescents merge into the black ring. **The mascot comes from the print-ready STL** `keychain/esperance_tunis_mascot_source.stl` (in inches), whose line-art is drawn for a nozzle. Its raised lines are taken at their own size, with the feet just above "1919", and printed black on the white background, so the face is light and the eyes and smile are dark. There's a 0.6 mm white gap between the hat and the middle stripe. Black gaps narrower than 0.42 mm and white lines narrower than 0.34 mm are widened, each only by what it lacks. The original bottom text is far too condensed to print at 50 mm. So "ESPERANCE SPORTIVE DE TUNIS" is re-lettered in DejaVu Sans Bold (squeezed to 63 % width) along the whole bottom of the ring, 3.1 mm tall.
 - Club Africain: the shapes are layered in the same order as the SVG. The stripes are cut to the shield shape (the SVG clip path), and the 8-unit stroke around it becomes a red band. At 50 mm every detail is at least 0.3 mm wide, so nothing is thickened.
 
 ## Printing on the Creality K2 SE (Creality Print, PLA, 0.4 nozzle)
@@ -88,3 +88,17 @@ Printer profile **Creality K2 SE 0.4 nozzle**. Print flat, logo facing **up**, o
 
 **Without a CFS (one spool, one swap):** slice `<p>_keychain_single_color.stl` and open the preview. Drag the layer slider to **3.40 mm**: this is the first layer that only prints the raised details, and it's the same height for all the keychains. Right-click the **+** and choose **Add pause**. Start with the base color. When the printer pauses, unload, load the relief color, purge until the white comes out clean, then resume.
 Keychains that share the same two colors can go on one plate (CS Sfaxien and Esperance = black→white, Club Africain = red→white, Brand = black→red). Otherwise use separate plates, or the CFS with black, red and white.
+
+### Esperance keychain on the K2 SE, step by step (CFS: 1A = white, 1B = black)
+
+1. Creality Print → open `stl/est_keychain_2color.3mf`. Printer **Creality K2 SE 0.4**, process **0.20mm Standard @Creality K2 SE**.
+2. Filament panel → sync from the CFS → 1A white Hyper PLA, 1B black Hyper PLA.
+3. Object list → right-click `black_base` → *Change filament* → **1B (black)**; right-click `white_relief` → **1A (white)**.
+4. Process changes (everything else default):
+   - Quality: wall generator **Arachne**, **Detect thin walls** on, seam **Aligned**
+   - Strength: **3** walls, top **5** / bottom **4** layers, infill **25 % gyroid**
+   - Speed: outer wall **100 mm/s** (fine mascot lines), **Slow down for small details** on
+   - Others: **Ironing → Top surfaces** (smooth white face), no supports, no brim
+   - Prime tower on (automatic), flush volumes at default or higher: black → white needs a full purge
+5. Slice → Preview: black up to **3.20 mm**, white only from **3.40 mm**; the mascot's eyes and the letters should show as separate lines. Send print.
+6. Without the CFS: slice `stl/est_keychain_single_color.stl`, add a **pause at 3.40 mm**, start in black, swap to white at the pause.

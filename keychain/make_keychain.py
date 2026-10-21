@@ -19,7 +19,7 @@ import numpy as np
 import svgelements as se
 import trimesh
 from shapely import affinity
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
@@ -346,12 +346,28 @@ def arc_text(text, font, r_base, cap_h, a0, a1, tracking):
     return unary_union(out), sx
 
 
+def stl_mascot(fn, region):
+    """Raised line-art from the print-ready EST STL (inches): union of the top faces of the bodies inside
+    region (x0, y0, x1, y1 in mm)."""
+    m = trimesh.load(fn)
+    m.apply_scale(25.4)
+    x0, y0, x1, y1 = region
+    tris = []
+    for b in m.split(only_watertight=False):
+        (bx0, by0, _), (bx1, by1, _) = b.bounds
+        if bx0 >= x0 and by0 >= y0 and bx1 <= x1 and by1 <= y1:
+            tris += [Polygon(t) for t in b.triangles[b.face_normals[:, 2] > 0.99][:, :, :2]]
+    return unary_union([t for t in tris if t.area > 1e-9]).buffer(1e-4).buffer(-1e-4)
+
+
 def crest_est():
     """Esperance Sportive de Tunis from the Illustrator file, in two colors.
 
-    Light colors (yellow, gold, skin, white) -> white; black, grey and red -> black. The mascot's hairline
-    outlines become 0.42 mm black lines. The bottom text is too condensed to print at this size, so it is
-    re-lettered along the full bottom arc.
+    Light colors (yellow, gold, skin, white) -> white; black, grey and red -> black. The bottom text is too
+    condensed to print at this size, so it is re-lettered along the full bottom arc.
+    The mascot is replaced by the one from the print-ready STL (esperance_tunis_mascot_source.stl), whose
+    line-art is drawn for a nozzle, and used at its own size. That STL raises the lines on a dark background; here the mascot sits on
+    white, so its lines become black and the space between them white (light face, dark hair and pupils).
     """
     items = parse_ai3(os.path.join(HERE, "esperance_tunis_logo.ai"))
     outer = Polygon(items[0]["rings"][0])          # first shape: the outer yellow rim
@@ -359,7 +375,7 @@ def crest_est():
     radius = (outer.bounds[2] - outer.bounds[0]) / 2
     s = SHIELD_H / 2 / radius                       # pt -> mm
     tf = lambda g: affinity.scale(affinity.translate(g, -c.x, -c.y), s, s, origin=(0, 0))
-    white = Polygon()
+
     def filled(rings):
         g = Polygon()
         for r in rings:
@@ -367,17 +383,17 @@ def crest_est():
                 g = g.symmetric_difference(Polygon(r).buffer(0))
         return g
 
-    for it in items:
+    white, old_mascot = Polygon(), []
+    for i, it in enumerate(items):
+        pts = np.concatenate(it["rings"])
+        # items 13+ are the original mascot, except the "1919" digits and their outlines (below the mascot)
+        if i >= 13 and not (pts[:, 1].min() > 607 and pts[:, 1].max() < 620):
+            old_mascot.append(pts)
+            continue
         if it["kind"] == "fill":
             g = filled(it["rings"])
         else:
-            w = it["width"] if cmyk_is_light(it["cmyk"]) else max(it["width"], MIN_STROKE / s)
-            if it.get("outline"):
-                # border of a filled shape: draw it outward only, so small shapes (eyes, teeth) keep their size
-                f = filled(it["rings"])
-                g = f.buffer(w).difference(f)
-            else:
-                g = unary_union([LineString(r).buffer(w / 2) for r in it["rings"]])
+            g = unary_union([LineString(r).buffer(it["width"] / 2) for r in it["rings"]])
         g = tf(g)
         if cmyk_is_light(it["cmyk"]):
             p = g.centroid
@@ -387,6 +403,19 @@ def crest_est():
             white = white.union(g)
         else:
             white = white.difference(g)
+
+    # STL mascot at its own (printable) size: feet where the original mascot's feet were, centered on it.
+    # It is a little taller than the original, so the middle stripe gets a 0.6 mm white gap around the hat.
+    old = (np.concatenate(old_mascot) - [c.x, c.y]) * s
+    ox0, oy0, ox1 = old[:, 0].min(), old[:, 1].min(), old[:, 0].max()
+    lines = stl_mascot(os.path.join(HERE, "esperance_tunis_mascot_source.stl"), (-6.5, -5.2, 6.0, 16.2))
+    lx0, ly0, lx1, ly1 = lines.bounds
+    lines = affinity.translate(lines, (ox0 + ox1) / 2 - (lx0 + lx1) / 2, oy0 - ly0)
+    silhouette = unary_union([Polygon(p.exterior) for p in getattr(lines, "geoms", [lines])])
+    mid = (silhouette.bounds[1] + silhouette.bounds[3]) / 2
+    halo = silhouette.buffer(0.6).intersection(box(-SHIELD_H, mid, SHIELD_H, SHIELD_H))
+    white = white.union(silhouette).union(halo).difference(lines)
+
     disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
     black = thicken(disk.difference(white), MIN_STROKE / 2)  # gaps and lines the nozzle must keep open
     white = thicken(disk.difference(black), 0.17).intersection(disk)  # thin rims (Arachne prints 0.34)
