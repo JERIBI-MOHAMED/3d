@@ -104,7 +104,8 @@ def _uuid(*key):
     return str(uuid.uuid5(uuid.NAMESPACE_URL, "/".join(map(str, key))))
 
 
-def _mesh_xml(oid, verts, tris, paint):
+def _mesh_xml(meshes):
+    """One object file; meshes = [(id, verts, tris, paint)], one mesh object per part."""
     rows = ['<?xml version="1.0" encoding="UTF-8"?>',
             '<model unit="millimeter" xml:lang="en-US" '
             'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" '
@@ -112,34 +113,41 @@ def _mesh_xml(oid, verts, tris, paint):
             'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" '
             'requiredextensions="p">',
             ' <metadata name="BambuStudio:3mfVersion">1</metadata>',
-            ' <resources>',
-            f'  <object id="{oid}" p:UUID="{_uuid("mesh", oid)}" type="model">',
-            '   <mesh>', '    <vertices>']
-    rows += [f'     <vertex x="{x:.4f}" y="{y:.4f}" z="{z:.4f}"/>' for x, y, z in verts]
-    rows += ['    </vertices>', '    <triangles>']
-    for i, (a, b, c) in enumerate(tris):
-        p = f' paint_color="{paint[i]}"' if paint is not None and paint[i] else ""
-        rows.append(f'     <triangle v1="{a}" v2="{b}" v3="{c}"{p}/>')
-    rows += ['    </triangles>', '   </mesh>', '  </object>', ' </resources>', ' <build/>',
-             '</model>']
+            ' <resources>']
+    for oid, verts, tris, paint in meshes:
+        rows += [f'  <object id="{oid}" p:UUID="{_uuid("mesh", oid)}" type="model">',
+                 '   <mesh>', '    <vertices>']
+        rows += [f'     <vertex x="{x:.4f}" y="{y:.4f}" z="{z:.4f}"/>' for x, y, z in verts]
+        rows += ['    </vertices>', '    <triangles>']
+        for i, (a, b, c) in enumerate(tris):
+            p = f' paint_color="{paint[i]}"' if paint is not None and paint[i] else ""
+            rows.append(f'     <triangle v1="{a}" v2="{b}" v3="{c}"{p}/>')
+        rows += ['    </triangles>', '   </mesh>', '  </object>']
+    rows += [' </resources>', ' <build/>', '</model>']
     return "\n".join(rows)
 
 
 def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(), towers=None):
     """plates: [(plate name, [part, ...])], part = dict(name, verts, tris, extruder,
     xy (centre on the plate), paint (per triangle '' / '4' / '8' ...), settings {key: value},
-    assembly (4x4 matrix for the assembly view)). filaments: [(name, '#RRGGBB')].
+    assembly (4x4 matrix for the assembly view)). A part with volumes=[dict(name, verts,
+    tris, extruder, paint), ...] instead of verts/tris is one object made of several parts
+    kept in place; where parts overlap the later one wins. filaments: [(name, '#RRGGBB')].
     towers: prime tower position (x, y) per plate."""
-    objects, oid = [], 0
+    objects, next_id = [], 0
     for p_idx, (_, parts) in enumerate(plates):
         origin = plate_origin(p_idx, len(plates))
         for part in parts:
-            v = np.asarray(part["verts"], float)
-            lo, hi = v.min(0), v.max(0)
+            vols = part.get("volumes") or [dict(name=part["name"], verts=part["verts"],
+                                                tris=part["tris"], paint=part.get("paint"))]
+            allv = np.vstack([np.asarray(v["verts"], float) for v in vols])
+            lo, hi = allv.min(0), allv.max(0)
             centre = (lo + hi) / 2
-            oid += 2
-            objects.append(dict(part, id=oid, mesh_id=oid - 1, plate=p_idx + 1,
-                                local=v - centre, centre=centre,
+            for v in vols:
+                next_id += 1
+                v.update(id=next_id, local=np.asarray(v["verts"], float) - centre)
+            next_id += 1
+            objects.append(dict(part, id=next_id, volumes=vols, plate=p_idx + 1, centre=centre,
                                 pos=origin + [part["xy"][0], part["xy"][1], (hi[2] - lo[2]) / 2]))
 
     model = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -156,11 +164,11 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
              ' <resources>']
     for o in objects:
         model += [f'  <object id="{o["id"]}" p:UUID="{_uuid("obj", o["id"])}" type="model">',
-                  '   <components>',
-                  f'    <component p:path="/3D/Objects/object_{o["id"]}.model" '
-                  f'objectid="{o["mesh_id"]}" p:UUID="{_uuid("cmp", o["id"])}" '
-                  'transform="1 0 0 0 1 0 0 0 1 0 0 0"/>',
-                  '   </components>', '  </object>']
+                  '   <components>']
+        model += [f'    <component p:path="/3D/Objects/object_{o["id"]}.model" '
+                  f'objectid="{v["id"]}" p:UUID="{_uuid("cmp", v["id"])}" '
+                  'transform="1 0 0 0 1 0 0 0 1 0 0 0"/>' for v in o["volumes"]]
+        model += ['   </components>', '  </object>']
     model += [' </resources>', f' <build p:UUID="{_uuid("build")}">']
     for o in objects:
         x, y, z = o["pos"]
@@ -174,12 +182,15 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
                 f'    <metadata key="name" value="{o["name"]}"/>',
                 f'    <metadata key="extruder" value="{o["extruder"]}"/>']
         cfg += [f'    <metadata key="{k}" value="{v}"/>' for k, v in o.get("settings", {}).items()]
-        cfg += [f'    <part id="{o["mesh_id"]}" subtype="normal_part">',
-                f'      <metadata key="name" value="{o["name"]}"/>',
-                '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>',
-                '      <mesh_stat edges_fixed="0" degenerate_facets="0" facets_removed="0" '
-                'facets_reversed="0" backwards_edges="0"/>',
-                '    </part>', '  </object>']
+        for v in o["volumes"]:
+            cfg += [f'    <part id="{v["id"]}" subtype="normal_part">',
+                    f'      <metadata key="name" value="{v["name"]}"/>',
+                    '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>']
+            if "extruder" in v:
+                cfg.append(f'      <metadata key="extruder" value="{v["extruder"]}"/>')
+            cfg += ['      <mesh_stat edges_fixed="0" degenerate_facets="0" facets_removed="0" '
+                    'facets_reversed="0" backwards_edges="0"/>', '    </part>']
+        cfg.append('  </object>')
     for p_idx, (name, _) in enumerate(plates):
         n = p_idx + 1
         cfg += ['  <plate>', f'    <metadata key="plater_id" value="{n}"/>',
@@ -244,7 +255,8 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
         z.writestr("3D/_rels/3dmodel.model.rels", "\n".join(rels_model))
         for o in objects:
             z.writestr(f"3D/Objects/object_{o['id']}.model",
-                       _mesh_xml(o["mesh_id"], o["local"], o["tris"], o.get("paint")))
+                       _mesh_xml([(v["id"], v["local"], v["tris"], v.get("paint"))
+                                  for v in o["volumes"]]))
         z.writestr("Metadata/model_settings.config", "\n".join(cfg))
         z.writestr("Metadata/project_settings.config", json.dumps(settings, indent=4))
         z.writestr("Metadata/creality.config", creality)

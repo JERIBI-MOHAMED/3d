@@ -52,6 +52,7 @@ in units of the ball diameter derived from `HEIGHT`: assembled it stands **210 m
 | Foot with D-shaped spigot | `trophy_base.stl` | Ø56 x 71 | upright, no supports, silver |
 | Collar ring | `trophy_ring.stl` | Ø25.6 x 4.2 | flat, gold |
 | Body, front + back halves | `trophy_body_front.stl` + `trophy_body_back.stl` | 61 x 23 x 140 each | lying flat on the cut face, no supports |
+| Gold stripes of each half (two-colour) | `trophy_body_front_gold.stl` + `trophy_body_back_gold.stl` | 1.2 mm deep | add as a part of its half, in gold |
 | Ball, split (no supports) | `trophy_ball_top.stl` + `trophy_ball_bottom.stl` | Ø48.4 x 25 each | flat face down, gold |
 | Ball, one piece | `trophy_ball.stl` | Ø48.4 | tree supports under the bottom, gold |
 | Whole body (reference) | `trophy_body.stl` | 61 x 45 x 140 | not for printing: the ball can't go in |
@@ -79,14 +80,16 @@ filament 2 = **gold silk** (`CR-Silk` profile, 220 °C nozzle / 60 °C bed). Loa
 |---|---|---|
 | 1 | ball top + ball bottom (flat side down, 0.12 mm layers) + ring | gold |
 | 2 | base + body halves (stripes painted afterwards with a gold paint pen) | silver |
-| 3 | body halves with the gold stripes printed (CFS) | silver + gold |
+| 3 | body halves with the gold stripes printed (CFS): each half = silver part + gold stripe part | silver + gold |
 
 Settings changed from the K2 SE system preset (marked as changed, so they survive loading):
 3 walls (Arachne), gyroid 15 %, outer wall 120 mm/s (silk shine), seam at the back,
 hole compensation +0.1 mm (pin and ring fits), purge into infill. No supports anywhere.
 
 Print the body halves of plate 2 (silver, then a gold paint pen) or of plate 3, not both.
-Plate 3 needs ~140 filament changes (the curved arms carry gold on every layer of the halves),
+The gold stripes are real parts (1.2 mm deep, cut exactly along the raised stripe steps, listed
+after the silver part so they win where they overlap), not paint, so their edges are crisp and the
+hole compensation stays active. Plate 3 needs ~140 filament changes (the curved arms carry gold on every layer of the halves),
 about 11 h of changes and ~90 g of purge at the K2 SE's 135 s per change.
 `k2se_3mf.py` writes the project; `k2se_settings.json` is the K2 SE system profile flattened from
 Creality Print's official profiles.
