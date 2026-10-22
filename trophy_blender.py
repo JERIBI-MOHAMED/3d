@@ -14,6 +14,7 @@ Exports 6 printable parts (units = mm, assembled height = HEIGHT):
     trophy_ball.stl         one-piece ball with Africa map (needs supports)
     trophy_ball_top.stl     same ball split at the equator, no supports:
     trophy_ball_bottom.stl  glue the halves with 2 filament pins
+and trophy_k2se.3mf, a coloured Creality Print project for the K2 SE (needs k2se_3mf.py).
 The ball slides into the loop from the front and is locked by 2 pins
 (1.75 mm filament) pushed through the arms into the ball.
 
@@ -74,6 +75,21 @@ AFRICA_H = 1.2           # Africa relief height (mm)
 AFRICA_SCALE = 1.2       # Africa map size (1 = true size on a globe the size of the ball)
 AFRICA_TILT = 50.0       # Africa centre elevation above the ball equator, facing front (deg)
 BALL_SUBDIV = 8          # icosphere subdivisions (8 -> 0.35 mm triangles at D = 65)
+
+# Creality K2 SE project (stl/trophy_k2se.3mf): filament 1 silver, filament 2 gold
+K2SE_COLOURS = [("Silver silk", "#C4C7CC"), ("Gold silk", "#D9A93A")]
+K2SE_FLUSH = [0, 280, 320, 0]           # purge volumes silver->gold, gold->silver (mm3)
+K2SE_PROCESS = {                        # changes to "0.16mm Standard @Creality K2 SE"
+    "wall_loops": "3",                  # strong thin arms around the pin holes
+    "wall_generator": "arachne",        # clean thin ribs and arm tips
+    "sparse_infill_pattern": "gyroid",
+    "outer_wall_speed": "120",          # silk filament: slower outer wall = better shine
+    "seam_position": "back",            # seam on the back of the trophy
+    "xy_hole_compensation": "0.1",      # pin / socket / ring holes fit first time
+    "flush_into_infill": "1",           # two-colour body: purge into its infill, less waste
+}
+K2SE_BODY = {"brim_type": "outer_only", "brim_width": "10"}  # tall part on a small neck
+K2SE_BALL = {"layer_height": "0.12"}    # smoother dome
 
 VOXEL = 0.3              # body sampling step (mm)
 BODY_DECIMATE = 0.09     # keep this ratio of the body triangles (1 = no decimation)
@@ -671,6 +687,62 @@ def assemble(base, ring, body, ball, halves=()):
             poly.use_smooth = o.name != "trophy_ring"
 
 
+def mesh_arrays(obj, attr=None):
+    """Triangles of an object (and a per-vertex float attribute) as numpy arrays."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    bm.verts.index_update()
+    verts = np.array([v.co[:] for v in bm.verts])
+    tris = np.array([[v.index for v in f.verts] for f in bm.faces])
+    vals = None
+    if attr:
+        layer = bm.verts.layers.float.get(attr)
+        vals = np.array([v[layer] for v in bm.verts])
+    bm.free()
+    return verts, tris, vals
+
+
+def export_k2se(base, ring, body, top, bottom):
+    """Creality Print project for the K2 SE: 3 plates, colours, two-colour body."""
+    here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ""
+    sys.path.insert(0, here)
+    try:
+        import k2se_3mf
+    except ImportError:
+        print("k2se_3mf.py not found next to this script: no K2 SE project written")
+        return
+    z_ring, z_body = BASE_H * D, BASE_H * D + RING_H
+
+    def part(obj, extruder, xy, settings=None, flip=False, z=0.0, paint=False):
+        v, t, g = mesh_arrays(obj, "gold" if paint else None)
+        if flip:                                       # flat face down on the bed
+            v = v * [1, -1, -1]
+        asm = np.eye(4)
+        asm[2, 3] = z
+        return dict(name=obj.name, verts=v, tris=t, extruder=extruder, xy=xy,
+                    settings=settings or {}, assembly=asm,
+                    paint=np.where(g[t].mean(1) > 0.5, "8", "") if paint else None)
+
+    imgs = [os.path.join(here, "images", n + ".png")
+            for n in ("trophy_ball", "trophy_front", "trophy_three_quarter")]
+    plates = [
+        ("Gold - ball halves + ring", [part(top, 2, (55, 107), K2SE_BALL, z=z_body + ZB),
+                                       part(bottom, 2, (122, 107), K2SE_BALL, flip=True,
+                                            z=z_body + ZB),
+                                       part(ring, 2, (182, 107), z=z_ring)]),
+        ("Silver - base + body (paint the stripes)", [part(base, 1, (60, 107)),
+                                                      part(body, 1, (150, 107), K2SE_BODY,
+                                                           z=z_body)]),
+        ("Two-colour body - CFS gold stripes", [part(body, 1, (90, 107), K2SE_BODY, z=z_body,
+                                                     paint=True)]),
+    ]
+    path = os.path.join(OUT_DIR, "trophy_k2se.3mf")
+    k2se_3mf.write_project(path, plates, K2SE_COLOURS, K2SE_PROCESS, K2SE_FLUSH,
+                           "African club trophy", [i for i in imgs if os.path.exists(i)])
+    print("Creality K2 SE project:", path)
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -683,6 +755,7 @@ def main():
     for o in parts:
         d = o.dimensions
         print(f"{o.name}: {d.x:.1f} x {d.y:.1f} x {d.z:.1f} mm, {len(o.data.polygons)} faces")
+    export_k2se(base, ring, body, *halves)
     assemble(base, ring, body, ball, halves)
 
 

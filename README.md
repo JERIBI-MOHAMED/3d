@@ -62,3 +62,26 @@ Slide the ball into the loop from the front, then push a 1.75 mm filament pin (~
 arm's outer edge into the ball and trim flush.
 Fit checks: ball 0.3 mm clear of the arms everywhere (slides in from the front), pin channels straight
 through both arms into 8 mm holes in the ball, spigot 0.3 mm clearance in the socket.
+
+## Creality K2 SE project (`stl/trophy_k2se.3mf`)
+
+Open in **Creality Print 6 or 7** (File > Open project, accept loading the project settings).
+Printer `Creality K2 SE 0.4 nozzle`, process `0.16mm Standard`, filament 1 = **silver silk**,
+filament 2 = **gold silk** (`CR-Silk` profile, 220 °C nozzle / 60 °C bed). Load them in CFS slots 1 and 2.
+
+| Plate | Parts | Filament |
+|---|---|---|
+| 1 | ball top + ball bottom (flat side down, 0.12 mm layers) + ring | gold |
+| 2 | base + body (stripes painted afterwards with a gold paint pen) | silver |
+| 3 | body with the gold stripes printed (CFS two colours) | silver + gold |
+
+Settings changed from the K2 SE system preset (marked as changed, so they survive loading):
+3 walls (Arachne), gyroid 15 %, outer wall 120 mm/s (silk shine), seam at the back,
+hole compensation +0.1 mm (pin, socket and ring fits), purge into infill; body: 10 mm brim.
+No supports anywhere. Use glue stick under the body (tall part on a Ø23 mm neck).
+
+Plate 3 needs ~740 filament changes (stripes on 743 of 854 layers): about **28 h of changes and
+~280 g of purge** at the K2 SE's 135 s per change. Plate 2 + a gold paint pen (liquid chrome)
+gives the same look in a fraction of the time; print either plate 2's body or plate 3, not both.
+`k2se_3mf.py` writes the project; `k2se_settings.json` is the K2 SE system profile flattened from
+Creality Print's official profiles.
