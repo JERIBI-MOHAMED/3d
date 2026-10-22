@@ -7,14 +7,14 @@ Usage
 In Blender : Scripting tab -> Open this file -> Run Script
 Headless   : blender -b -P trophy_blender.py -- [out_dir]
 
-Exports 10 printable parts (units = mm, assembled height = HEIGHT):
+Exports 12 printable parts (units = mm, assembled height = HEIGHT):
     trophy_base.stl         flared foot with a D-shaped spigot on top
     trophy_ring.stl         collar between foot and body (print in gold)
     trophy_body.stl         the whole body (reference; print the two halves below)
     trophy_body_front.stl   the body split front / back, printed lying flat on the cut;
     trophy_body_back.stl    the ball is laid in the arms' cradle, then the halves are glued
-    trophy_body_gold_front.stl / _back.stl  the gold stripes of each half as separate parts
-                            (two-colour printing: add them as parts in filament 2)
+    trophy_body_front_silver.stl / _gold.stl (and _back_)  each half split into two parts
+                            for two-colour printing: silver + gold stripes (side by side)
     trophy_ball.stl         one-piece ball with Africa map (needs supports)
     trophy_ball_top.stl     same ball split at the equator, no supports:
     trophy_ball_bottom.stl  glue the halves with 2 filament pins
@@ -55,7 +55,7 @@ RIBS = [0.17, 0.12, 0.17, 0.12, 0.17, 0.12, 0.13]  # stripe widths: gold, silver
 RIB_V = 0.18             # width of the striped ribbon along the V (D)
 RIB_SPREAD = (1.3, 1.5)  # above this height band (D) the ribbon fills the whole arm
 RIB_STEP = 0.8           # silver stripes are recessed by this (mm)
-RIB_EDGE = 0.35          # half width of the stripe step (mm)
+RIB_EDGE = 0.8           # half width of the stripe step (mm)
 
 BASE_H = 1.08            # foot height (D)
 BASE_R = 0.58            # foot bottom radius (D)
@@ -100,10 +100,9 @@ K2SE_PROCESS = {                        # changes to "0.16mm Standard @Creality 
 K2SE_BALL = {"layer_height": "0.12"}    # smoother dome
 
 VOXEL = 0.3              # body sampling step (mm)
-BODY_DECIMATE = 0.09     # keep this ratio of the body triangles (1 = no decimation)
-GOLD_SKIN = 1.2          # two-colour body: depth of the gold stripe parts (mm)
-GOLD_PROUD = 0.06        # gold parts stand this much proud so no silver shows through (mm)
-GOLD_DECIMATE = 0.1
+SMOOTH_ITERS = 15        # Taubin smoothing passes on the body meshes (0 = off)
+BODY_DECIMATE = 0.2      # keep this ratio of the body triangles (1 = no decimation)
+STRIPE_DECIMATE = 0.2    # two-colour body: the smooth stripe cutter's triangles kept
 BALL_DECIMATE = 0.35
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stl") \
@@ -144,6 +143,21 @@ AFRICA_CENTRE = (17.0, 2.0)  # (lon, lat) put at AFRICA_TILT on the front of the
 def smoothstep(t):
     t = np.clip(t, 0, 1)
     return t * t * (3 - 2 * t)
+
+
+def taubin(verts, tris, iters=SMOOTH_ITERS, lam=0.5, mu=-0.53):
+    """Smooth a mesh without shrinking it: alternate a shrinking and an inflating
+    Laplacian step (removes the sampling grid's facets, keeps the shape)."""
+    e = np.vstack([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
+    e = np.vstack([e, e[:, ::-1]])
+    n = len(verts)
+    cnt = np.bincount(e[:, 0], minlength=n).astype(float)[:, None]
+    v = np.asarray(verts, float).copy()
+    for _ in range(iters):
+        for k in (lam, mu):
+            acc = np.column_stack([np.bincount(e[:, 0], v[e[:, 1], i], n) for i in range(3)])
+            v += k * (acc / np.maximum(cnt, 1) - v)
+    return v
 
 
 def make_object(name, verts, faces):
@@ -223,17 +237,29 @@ def apply_modifier(obj, mod):
 
 
 def boolean(target, tool, op, keep_tool=False):
-    mod = target.modifiers.new("bool", "BOOLEAN")
-    mod.operation = op
-    mod.object = tool
-    mod.solver = "EXACT"
-    apply_modifier(target, mod)
+    for self_check in (False, True):
+        backup = target.data.copy()
+        mod = target.modifiers.new("bool", "BOOLEAN")
+        mod.operation = op
+        mod.object = tool
+        mod.solver = "EXACT"
+        mod.use_self = self_check          # slower; needed if a mesh touches itself somewhere
+        apply_modifier(target, mod)
+        if target.data.polygons:
+            bpy.data.meshes.remove(backup)
+            break
+        old = target.data
+        target.data = backup
+        bpy.data.meshes.remove(old)
+    else:
+        raise RuntimeError(f"boolean {op} on {target.name} gave an empty mesh")
     if not keep_tool:
         bpy.data.objects.remove(tool, do_unlink=True)
 
 
-def drop_specks(obj, min_faces=200):
-    """Delete tiny loose pieces (slivers where the ball seat meets the opening)."""
+def drop_specks(obj, min_faces=200, min_size=10.0):
+    """Delete tiny loose pieces (slivers where the ball seat meets the opening): pieces with
+    fewer than min_faces faces or smaller than min_size mm in every direction."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     seen, specks = set(), []
@@ -250,7 +276,8 @@ def drop_specks(obj, min_faces=200):
                     if h.index not in seen:
                         seen.add(h.index)
                         stack.append(h)
-        if len(part) < min_faces:
+        co = np.array([v.co[:] for g in part for v in g.verts])
+        if len(part) < min_faces or np.ptp(co, axis=0).max() < min_size:
             specks += part
     bmesh.ops.delete(bm, geom=specks, context="FACES")
     bm.to_mesh(obj.data)
@@ -451,8 +478,8 @@ def marching_tets(f, origin, step):
 
 
 # ----------------------------------------------------------------- BODY
-def body_field(gold=False):
-    """Sampled body (negative inside). gold=True: only the gold stripes, GOLD_SKIN deep."""
+def body_field():
+    """Sampled body (negative inside)."""
     poly, guide, edge = body_outline()
     v = VOXEL
     xmax = np.abs(poly[:, 0]).max() + 3 * v
@@ -489,18 +516,13 @@ def body_field(gold=False):
     sock = np.maximum(np.maximum(rad - rs, y3 - (SPIGOT_FLAT + CLR)),
                       z3 - (SOCKET_D + CLR) - np.maximum(rs - rad, 0))
     f = np.maximum(f, -sock)
-    if gold:
-        # stripe columns (threshold 0.2 so the raised steps' walls are gold) within GOLD_SKIN
-        # of the surface; a separate part that overrides the silver body in the slicer
-        g = gold_mask(*ribbon(p, guide, edge)).reshape(shape2).astype(np.float32)
-        zone = np.maximum((0.2 - g) * 2 * RIB_EDGE, -f - GOLD_SKIN)
-        f = np.maximum(f - GOLD_PROUD, zone)
     return f, np.array([xs[0], ys[0], zs[0]]), guide, edge
 
 
 def build_body():
     f, origin, guide, edge = body_field()
     verts, tris = marching_tets(f, origin, VOXEL)
+    verts = taubin(verts, tris)
     del f
     body = make_object("trophy_body", verts, tris.tolist())
     decimate(body, BODY_DECIMATE)
@@ -513,15 +535,53 @@ def build_body():
     return body
 
 
-def build_gold():
-    """The gold stripes of the body as their own part (for two-colour printing)."""
-    f, origin, _, _ = body_field(gold=True)
-    verts, tris = marching_tets(f, origin, VOXEL)
-    del f
-    gold = make_object("trophy_body_gold", verts, tris.tolist())
-    decimate(gold, GOLD_DECIMATE)
-    drop_specks(gold, 30)
-    return gold
+def build_stripes():
+    """Smooth cutter shaped like the gold stripes, extruded front to back. It only varies
+    seen from the front, so it is sampled finely in x/z and with 3 samples in depth."""
+    poly, guide, edge = body_outline()
+    v = VOXEL / 2
+    xmax = np.abs(poly[:, 0]).max() + 4 * v
+    ztop = poly[:, 1].max() + 4 * v
+    ymax = 3 * (max(t for _, t in DEPTH) * D + 2.0)     # front/back caps land past ymax / 2
+    xs = np.arange(-xmax, xmax + v, v)
+    zs = np.arange(-4 * v, ztop + v, v)
+    ys = np.array([-ymax, 0.0, ymax]) + 0.37             # no vertex on the halves' cut plane
+    gx, gz = np.meshgrid(xs, zs, indexing="ij")
+    p = np.column_stack([gx.ravel(), gz.ravel()])
+    # threshold 0.2 so the raised steps' walls are gold; closed all round outside the body
+    c = ((0.2 - gold_mask(*ribbon(p, guide, edge))) * 2 * RIB_EDGE).reshape(len(xs), 1, len(zs))
+    f = np.concatenate([np.maximum(c, 1e-3), c, np.maximum(c, 1e-3)], axis=1)
+    x3, z3 = xs[:, None, None], zs[None, None, :]
+    f = np.maximum(f, np.maximum(np.abs(x3) - (xmax - 2 * v),
+                                 np.maximum(z3 - (ztop - 2 * v), -z3 - 2 * v)))
+    verts, tris = marching_tets(f.astype(np.float32), np.array([xs[0], ys[0], zs[0]]),
+                                np.array([v, ymax, v]))
+    verts = taubin(verts, tris, iters=30)
+    cutter = make_object("stripes", verts, tris.tolist())
+    decimate(cutter, STRIPE_DECIMATE)
+    return cutter
+
+
+def colour_split(half, cutter):
+    """Exact boolean split of a body half into silver + gold parts: both share the cutter's
+    smooth walls, so the colour borders are clean, with no gap and no overlap."""
+    out = []
+    for part, op in (("silver", "DIFFERENCE"), ("gold", "INTERSECT")):
+        obj = half.copy()
+        obj.data = half.data.copy()
+        obj.name = obj.data.name = half.name + "_" + part
+        bpy.context.scene.collection.objects.link(obj)
+        boolean(obj, cutter, op, keep_tool=True)
+        bm = bmesh.new()                                 # weld coincident points the boolean
+        bm.from_mesh(obj.data)                           # leaves (they make 0-area triangles)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if len(set(f.verts)) < 3], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(obj.data)
+        bm.free()
+        drop_specks(obj, 300)
+        out.append(obj)
+    return out
 
 
 # ----------------------------------------------------------------- BALL
@@ -657,6 +717,7 @@ def split_body(body, pins=True):
         half.name = half.data.name = body.name.replace("body", "body_" + side)
         bpy.context.scene.collection.objects.link(half)
         boolean(half, box("cut", (-big, y0, -big), (big, y1, big)), "INTERSECT")
+        drop_specks(half, 1500)                          # crumbs the cut leaves at the tips
         if pins:
             holes = [cylinder("align", (x * D, -BODY_ALIGN_DEPTH - 0.3, z * D),
                               (x * D, BODY_ALIGN_DEPTH + 0.3, z * D), PIN_D / 2)
@@ -772,7 +833,8 @@ def mesh_arrays(obj, attr=None):
     return verts, tris, vals
 
 
-def export_k2se(base, ring, body, top, bottom, front, back, gold_front, gold_back):
+def export_k2se(base, ring, body, top, bottom, front, back, silver_front, silver_back,
+                gold_front, gold_back):
     """Creality Print project for the K2 SE: 3 plates, colours, two-colour body halves."""
     here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ""
     sys.path.insert(0, here)
@@ -814,8 +876,8 @@ def export_k2se(base, ring, body, top, bottom, front, back, gold_front, gold_bac
             part(base, 1, (174, 107))]),
         ("Two-colour body halves - gold stripes printed", [
             part(h, 1, xy, rot=face_down[side], z=z_body, gold=g)
-            for h, g, side, xy in ((front, gold_front, "front", (45, 107)),
-                                   (back, gold_back, "back", (115, 107)))]),
+            for h, g, side, xy in ((silver_front, gold_front, "front", (45, 107)),
+                                   (silver_back, gold_back, "back", (115, 107)))]),
     ]
     path = os.path.join(OUT_DIR, "trophy_k2se.3mf")
     k2se_3mf.write_project(path, plates, K2SE_COLOURS, K2SE_PROCESS, K2SE_FLUSH,
@@ -828,9 +890,12 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     base, ring, body, ball = build_base(), build_ring(), build_body(), build_ball()
-    gold = build_gold()
-    halves = split_ball(ball) + split_body(body) + split_body(gold, pins=False)
-    bpy.data.objects.remove(gold, do_unlink=True)
+    front, back = split_body(body)
+    cutter = build_stripes()
+    (silver_front, gold_front), (silver_back, gold_back) = [colour_split(h, cutter)
+                                                            for h in (front, back)]
+    bpy.data.objects.remove(cutter, do_unlink=True)
+    halves = split_ball(ball) + [front, back, silver_front, silver_back, gold_front, gold_back]
     parts = (base, ring, body, ball, *halves)
     for o in parts:
         export_stl(o, os.path.join(OUT_DIR, o.name + ".stl"))
