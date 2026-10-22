@@ -38,18 +38,21 @@ pockets behind the door; they exit through the door's top notches.
 Fit checks (boolean): block/top 0 interference when seated, door swings freely 10-100 deg
 (latch click at ~5 deg), pin press-fits only in the left wall, clips bite 1.2 mm into a 44 mm opening.
 
-# Hand sign on a stick (`sign/`)
+# Hand on a thin stick with a twist lock (`sign/make_twist_lock.py`)
 
-`sign/middle_finger_sign.3mf` is the hand model with a handle stick added underneath, so you can hold it up like a sign
-(preview: `images/hand_sign_preview.png`). Regenerate it from the original 3MF with
-`python3 sign/add_stick.py original.3mf sign/middle_finger_sign.3mf` (sizes are at the top of the script).
+`sign/twist_lock.3mf` (Creality K2 SE project, both parts on one plate) / `sign/stick.stl`: the original hand
+(35 mm, scale 0.35) gets a round cuff under the wrist with a socket, and a separate 6 mm stick has two lugs at its top
+(preview: `images/twist_lock_preview.png`). Regenerate with `python3 sign/make_twist_lock.py original_hand.3mf sign`
+(it also writes `hand_socket.stl`, 66 MB, not committed). Needs `pip install manifold3d trimesh pymeshfix`.
 
-- Total height 155 mm: hand 35 mm (scale 0.35, unchanged) on a 120 mm stick. The stick is 8 mm wide under the wrist,
-  widens to 12 mm at the grip, and ends in a 16 mm rounded knob that sits on the bed.
-- The stick goes 6 mm up inside the wrist. It is a second part of the same object, so the slicer merges it with the hand
-  and it scales with the hand if you resize the object.
-- Print upright with the knob on the bed. A 5 mm brim is already set (the print is tall and narrow). Keep tree supports on for the hand.
-  Use 3+ walls and 20 %+ infill for a strong stick; PETG bends before it breaks.
+- Assembly: push the stick into the cuff with the lugs in the two slots, then turn it **~90 deg** (counter-clockwise
+  looking down on the hand) until it clicks over the bump. Turn back to take it apart.
+- Hand 18.5 x 15.4 x 41 mm, printed upright on the cuff (tree supports for the fingers, 4 mm brim). The socket itself
+  needs no supports (45 deg ceilings).
+- Stick 6 mm x 130 mm (120 mm visible), printed lying down on its flat side, no supports.
+- Fit checks (boolean): 0 interference sliding in and at 90 deg; the lug rides over the 0.25 mm bump between ~35 and
+  65 deg (the click); it stops at ~93 deg and cannot be pulled out when locked. 0.2 mm clearance; if it is too tight on
+  your printer, raise `CLEAR` (or `DETENT_IN` for a softer click).
 
 # Stop sign paddle with the hand (`sign/make_stop_sign.py`)
 
