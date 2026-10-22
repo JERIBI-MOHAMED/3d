@@ -10,18 +10,20 @@ Headless   : blender -b -P trophy_blender.py -- [out_dir]
 Exports 8 printable parts (units = mm, assembled height = HEIGHT):
     trophy_base.stl         flared foot with a D-shaped spigot on top
     trophy_ring.stl         collar between foot and body (print in gold)
-    trophy_body.stl         the ribbon loop; gold ribs (raised) / silver grooves
+    trophy_body.stl         the whole body (reference; print the two halves below)
+    trophy_body_front.stl   the body split front / back, printed lying flat on the cut;
+    trophy_body_back.stl    the ball is laid in the arms' cradle, then the halves are glued
     trophy_ball.stl         one-piece ball with Africa map (needs supports)
     trophy_ball_top.stl     same ball split at the equator, no supports:
     trophy_ball_bottom.stl  glue the halves with 2 filament pins
-    trophy_body_front.stl   the body split front / back, for two-colour printing lying
-    trophy_body_back.stl    flat (stripes up); glue with 5 filament pins
 and trophy_k2se.3mf, a coloured Creality Print project for the K2 SE (needs k2se_3mf.py).
-The ball slides into the loop from the front and is locked by 2 pins
-(1.75 mm filament) pushed through the arms into the ball.
+
+The body is a rounded vase (deep as it is wide at the top) with the teardrop opening
+cut through it front to back; the arms are thick shells that cradle the ball.
 
 Everything is parametric: edit the PARAMETERS block and run again.
-Shapes are given in units of the ball diameter (D), measured on the reference photo.
+Shapes are given in units of the ball diameter (D), measured on a turntable video
+(front view for widths and the opening, side view for the depth).
 """
 import math
 import os
@@ -35,31 +37,32 @@ import numpy as np
 HEIGHT = 210.0           # assembled height (mm); everything scales with it (ball ~ HEIGHT / 4)
 GAP = 0.3                # ball <-> arms clearance (mm)
 
-# body (loop) outline, x = half width, z = height above the ring, both in D
-OUTER = [(0.215, -0.3), (0.215, 0.0), (0.235, 0.2), (0.28, 0.45), (0.37, 0.72),
-         (0.50, 0.97), (0.63, 1.22), (0.69, 1.47), (0.715, 1.77), (0.70, 1.97),
-         (0.665, 2.15), (0.625, 2.33), (0.585, 2.48)]
-HOLE = [(0.0, 0.85), (0.08, 0.97), (0.19, 1.17), (0.29, 1.37), (0.39, 1.57),
-        (0.445, 1.77), (0.485, 1.97)]  # V point -> where the hole meets the ball circle
-BALL_Z = 2.36            # ball centre height (D)
-CRADLE = (-15.0, 25.0)   # arms hug the ball from this angle to the tip (deg from equator)
-THICK = [(0.0, 0.215), (0.5, 0.2), (1.0, 0.19), (1.5, 0.16), (2.0, 0.13), (2.6, 0.11)]
-EDGE_R = [(0.0, 0.215), (0.45, 0.12), (1.2, 0.12), (1.6, 0.08)]  # rounded edges (z, r) D
+# body seen from the front: x = half width, z = height above the ring, both in D
+OUTER = [(0.215, -0.3), (0.215, 0.0), (0.25, 0.25), (0.33, 0.5), (0.40, 0.75), (0.47, 1.0),
+         (0.535, 1.3), (0.58, 1.6), (0.62, 1.9), (0.64, 2.2), (0.63, 2.45), (0.595, 2.65),
+         (0.54, 2.8)]
+HOLE = [(0.0, 0.65), (0.08, 0.85), (0.14, 1.0), (0.24, 1.3), (0.33, 1.6), (0.40, 1.9),
+        (0.42, 2.1), (0.42, 2.5), (0.42, 2.86)]  # opening: V point -> top, cut front to back
+BALL_Z = 2.65            # ball centre height (D); the opening is narrower than the ball, so
+                         # the arms hold it in spherical seats
+DEPTH = [(0.0, 0.215), (0.5, 0.29), (0.9, 0.38), (1.2, 0.49), (1.7, 0.60), (2.2, 0.50),
+         (2.5, 0.42), (2.85, 0.30)]  # body seen from the side: (z, half depth) D
+SOFT = 1.2               # rounding where the opening cuts the vase (mm)
 
 RIBS = [0.17, 0.12, 0.17, 0.12, 0.17, 0.12, 0.13]  # stripe widths: gold, silver, gold...
-RIB_V = 0.28             # width of the striped ribbon along the V (D)
-RIB_SPREAD = (1.15, 1.3)  # above this height band (D) the ribbon fills the whole arm
+RIB_V = 0.18             # width of the striped ribbon along the V (D)
+RIB_SPREAD = (1.3, 1.5)  # above this height band (D) the ribbon fills the whole arm
 RIB_STEP = 0.8           # silver stripes are recessed by this (mm)
 RIB_EDGE = 0.35          # half width of the stripe step (mm)
 
-BASE_H = 1.04            # foot height (D)
+BASE_H = 1.08            # foot height (D)
 BASE_R = 0.58            # foot bottom radius (D)
 NECK_R = 0.215           # neck radius at the ring (D)
 FLARE = 1.35             # >1 = more concave foot
 PLINTH_H = 3.0           # vertical band at the bottom of the foot (mm)
 PLINTH_STEP = 0.8        # small step above it (mm)
 RING_H = 4.2             # collar height (mm)
-RING_PROUD = 1.0         # collar sticks out of the neck by (mm)
+RING_PROUD = 2.4         # collar sticks out of the neck by (mm)
 
 SPIGOT_R = 6.5           # foot -> body spigot radius (mm)
 SPIGOT_FLAT = 3.6        # D flat (keys the body to the front) at y = this (mm)
@@ -67,11 +70,10 @@ SOCKET_D = 15.0          # spigot length inside the body (mm)
 CLR = 0.3                # sliding clearance (mm)
 
 PIN_D = 1.95             # pin hole for 1.75 mm filament (mm)
-PIN_IN_BALL = 8.0        # pin depth in the ball (mm)
 ALIGN_R = 0.25           # alignment pins of the split ball, at y = +-ALIGN_R*D
 ALIGN_DEPTH = 4.0        # per half (mm)
 
-BODY_ALIGN = [(0.0, 0.6), (0.545, 1.6), (-0.545, 1.6), (0.575, 2.1), (-0.575, 2.1)]  # (x, z) D
+BODY_ALIGN = [(0.0, 0.55), (0.42, 1.4), (-0.42, 1.4), (0.52, 2.0), (-0.52, 2.0)]  # (x, z) D
 BODY_ALIGN_DEPTH = 3.5   # alignment pin holes of the split body, per half (mm)
 
 SEAM_W = 1.2             # soccer-ball seam groove width (mm)
@@ -85,15 +87,14 @@ BALL_SUBDIV = 8          # icosphere subdivisions (8 -> 0.35 mm triangles at D =
 K2SE_COLOURS = [("Silver silk", "#C4C7CC"), ("Gold silk", "#D9A93A")]
 K2SE_FLUSH = [0, 280, 320, 0]           # purge volumes silver->gold, gold->silver (mm3)
 K2SE_PROCESS = {                        # changes to "0.16mm Standard @Creality K2 SE"
-    "wall_loops": "3",                  # strong thin arms around the pin holes
+    "wall_loops": "3",                  # strong arms and glue faces
     "wall_generator": "arachne",        # clean thin ribs and arm tips
     "sparse_infill_pattern": "gyroid",
     "outer_wall_speed": "120",          # silk filament: slower outer wall = better shine
     "seam_position": "back",            # seam on the back of the trophy
-    "xy_hole_compensation": "0.1",      # pin / socket / ring holes fit first time
+    "xy_hole_compensation": "0.1",      # pin / ring holes fit first time
     "flush_into_infill": "1",           # two-colour body: purge into its infill, less waste
 }
-K2SE_BODY = {"brim_type": "outer_only", "brim_width": "10"}  # tall part on a small neck
 K2SE_BALL = {"layer_height": "0.12"}    # smoother dome
 
 VOXEL = 0.3              # body sampling step (mm)
@@ -226,6 +227,31 @@ def boolean(target, tool, op, keep_tool=False):
         bpy.data.objects.remove(tool, do_unlink=True)
 
 
+def drop_specks(obj, min_faces=200):
+    """Delete tiny loose pieces (slivers where the ball seat meets the opening)."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    seen, specks = set(), []
+    for f in bm.faces:
+        if f.index in seen:
+            continue
+        part, stack = [], [f]
+        seen.add(f.index)
+        while stack:
+            g = stack.pop()
+            part.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h.index not in seen:
+                        seen.add(h.index)
+                        stack.append(h)
+        if len(part) < min_faces:
+            specks += part
+    bmesh.ops.delete(bm, geom=specks, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
 def decimate(obj, ratio):
     if ratio < 1:
         mod = obj.modifiers.new("decimate", "DECIMATE")
@@ -247,11 +273,6 @@ def catmull_rom(pts, n=16):
                               + (3 * p1 - p0 - 3 * p2 + p3) * t3))
     out.append(p[-2])
     return np.array(out)
-
-
-def arc2d(c, r, a0, a1, n):
-    a = np.radians(np.linspace(a0, a1, n))
-    return np.column_stack([c[0] + r * np.cos(a), c[1] + r * np.sin(a)])
 
 
 def seg_dist(p, a, b, chunk=8000):
@@ -283,10 +304,7 @@ def inside(p, poly, chunk=8000):
 # ----------------------------------------------------------------- BODY OUTLINE
 def body_outline():
     """Closed outline of the loop in the XZ plane + the rib guide segments (mm)."""
-    a0, a1 = CRADLE
-    c = (0.0, ZB)
-    hole = catmull_rom([(x * D, z * D) for x, z in HOLE] + [tuple(arc2d(c, R_HOLE, a0, a0, 1)[0])])
-    inner = np.vstack([hole, arc2d(c, R_HOLE, a0, a1, 48)[1:]])       # V point -> tip
+    inner = catmull_rom([(x * D, z * D) for x, z in HOLE])           # V point -> top
     outer = catmull_rom([(x * D, z * D) for x, z in OUTER])          # neck -> tip
     t_i, t_o = inner[-1], outer[-1]
     mid, rad = (t_i + t_o) / 2, np.linalg.norm(t_i - t_o) / 2
@@ -307,14 +325,19 @@ def body_outline():
     return poly, (guide[:-1], guide[1:]), (edge[:-1], edge[1:])
 
 
-def thickness(z):
-    zs, hs = zip(*THICK)
-    return np.interp(z, np.array(zs) * D, np.array(hs) * D)
+def half_depth(z):
+    zs, ts = zip(*DEPTH)
+    return np.interp(z, np.array(zs) * D, np.array(ts) * D)
 
 
-def edge_radius(z):
-    zs, rs = zip(*EDGE_R)
-    return np.interp(z, np.array(zs) * D, np.array(rs) * D)
+def half_width(z):
+    outer = catmull_rom([(x * D, z * D) for x, z in OUTER])
+    return np.interp(z, outer[:, 1], outer[:, 0])
+
+
+def smax(a, b, k):
+    """Smooth maximum (rounded intersection) with rounding radius ~k."""
+    return np.maximum(a, b) + np.maximum(k - np.abs(a - b), 0) ** 2 / (4 * k)
 
 
 def ribbon(p, guide, edge):
@@ -427,7 +450,7 @@ def body_field():
     poly, guide, edge = body_outline()
     v = VOXEL
     xmax = np.abs(poly[:, 0]).max() + 3 * v
-    hmax = thickness(0.0) + 3 * v
+    hmax = max(t for _, t in DEPTH) * D + 3 * v
     ztop = poly[:, 1].max() + 3 * v
     xs = np.arange(-xmax, xmax + v, v)
     ys = np.arange(-hmax, hmax + v, v)
@@ -439,19 +462,19 @@ def body_field():
     r2[inside(p, poly)] *= -1                            # signed distance to the outline
     shape2 = (len(xs), 1, len(zs))
     r2 = r2.reshape(shape2).astype(np.float32)
-    h = (thickness(gz).ravel() + rib_offset(p, guide, edge)).reshape(shape2).astype(np.float32)
-    rr = edge_radius(zs).astype(np.float32)[None, None, :]
-    ay = np.abs(ys).astype(np.float32)[None, :, None]
-
-    # rounded extrusion of the 2D outline: flat faces, edges rounded by rr
-    qx = r2 + rr
-    qy = ay - h + rr
-    f = np.minimum(np.maximum(qx, qy), 0) \
-        + np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qy, 0) ** 2) - rr
-    del qx, qy
+    rib = -rib_offset(p, guide, edge).reshape(shape2).astype(np.float32)
     z3 = zs.astype(np.float32)[None, None, :]
     x3 = xs.astype(np.float32)[:, None, None]
     y3 = ys.astype(np.float32)[None, :, None]
+
+    # vase with elliptical sections (front width x side depth), silver stripes recessed
+    w = half_width(zs).astype(np.float32)[None, None, :]
+    t = half_depth(zs).astype(np.float32)[None, None, :]
+    f = (np.sqrt((x3 / w) ** 2 + (y3 / t) ** 2) - 1) * np.minimum(w, t) + rib
+    # the opening cut front to back (outline seen from the front), softly rounded
+    f = smax(f, r2, SOFT)
+    # spherical seats for the ball in the arms
+    f = np.maximum(f, R_HOLE - np.sqrt(x3 ** 2 + y3 ** 2 + (z3 - ZB) ** 2))
     f = np.maximum(f, -z3)                               # flat bottom on the ring
 
     # D-shaped socket for the foot spigot, 45 deg cone roof (prints without support)
@@ -460,9 +483,6 @@ def body_field():
     sock = np.maximum(np.maximum(rad - rs, y3 - (SPIGOT_FLAT + CLR)),
                       z3 - (SOCKET_D + CLR) - np.maximum(rs - rad, 0))
     f = np.maximum(f, -sock)
-    # pin holes along X at the ball centre height, through both arms
-    pin = np.sqrt(y3 ** 2 + (z3 - ZB) ** 2) - PIN_D / 2 + 0 * x3
-    f = np.maximum(f, -pin)
     return f, np.array([xs[0], ys[0], zs[0]]), guide, edge
 
 
@@ -472,6 +492,7 @@ def build_body():
     del f
     body = make_object("trophy_body", verts, tris.tolist())
     decimate(body, BODY_DECIMATE)
+    drop_specks(body)
     # remember which part is a gold stripe (for the preview material)
     co = np.array([v.co[:] for v in body.data.vertices])
     gold = gold_mask(*ribbon(co[:, [0, 2]], guide, edge))
@@ -581,11 +602,6 @@ def build_ball():
     ball = bpy.data.objects.new("trophy_ball", mesh)
     bpy.context.scene.collection.objects.link(ball)
     decimate(ball, BALL_DECIMATE)
-
-    ext = R_BALL + AFRICA_H + 1
-    tools = [cylinder("pin", (s * (R_BALL - PIN_IN_BALL), 0, 0), (s * ext, 0, 0), PIN_D / 2)
-             for s in (1, -1)]
-    boolean(ball, join("pins", tools), "DIFFERENCE")
     return ball
 
 
@@ -607,9 +623,9 @@ def split_ball(ball):
 
 
 def split_body(body):
-    """Front and back halves (cut at y = 0) for two-colour printing: each half lies flat on
-    its cut face with the stripes up, so only its top layers need the gold filament.
-    The ball pin channel lies in the cut; 5 holes take 1.75 mm filament alignment pins."""
+    """Front and back halves (cut at y = 0), printed lying flat on the cut face. The ball is
+    laid in the back half's seats before the front half is glued on (the opening is narrower
+    than the ball). 5 holes take 1.75 mm filament alignment pins."""
     halves = []
     big = 300
     for name, y0, y1 in (("trophy_body_front", -big, 0), ("trophy_body_back", 0, big)):
@@ -626,13 +642,12 @@ def split_body(body):
 
 
 def stripe_paint(obj):
-    """Per triangle: True on the gold stripes of the flat face (not on the edges)."""
+    """Per triangle: True on the gold stripes (not on the glued cut face)."""
     v, t, _ = mesh_arrays(obj)
     _, guide, edge = body_outline()
-    c = v[t].mean(1)
     gold = gold_mask(*ribbon(v[:, [0, 2]], guide, edge))[t].mean(1) > 0.5
-    face = np.abs(c[:, 1]) > thickness(c[:, 2]) - RIB_STEP - 0.4
-    return gold & face
+    cut = np.abs(v[t][:, :, 1]).max(1) < 0.05
+    return gold & ~cut
 
 
 # ----------------------------------------------------------------- FOOT + RING
@@ -773,16 +788,18 @@ def export_k2se(base, ring, body, top, bottom, front, back):
                                        part(bottom, 2, (122, 107), K2SE_BALL, flip,
                                             z=z_body + ZB),
                                        part(ring, 2, (182, 107), z=z_ring)]),
-        ("Silver - base + body (paint the stripes)", [part(base, 1, (60, 107)),
-                                                      part(body, 1, (150, 107), K2SE_BODY,
-                                                           z=z_body)]),
-        ("Two-colour body halves - glue together", [
+        ("Silver - base + body halves (paint the stripes)", [
+            part(front, 1, (36, 107), rot=face_down[front.name], z=z_body),
+            part(back, 1, (104, 107), rot=face_down[back.name], z=z_body),
+            part(base, 1, (174, 107))]),
+        ("Two-colour body halves - gold stripes printed", [
             part(h, 1, xy, rot=face_down[h.name], z=z_body, paint=stripe_paint(h))
-            for h, xy in ((front, (52, 100)), (back, (136, 100)))]),
+            for h, xy in ((front, (45, 107)), (back, (115, 107)))]),
     ]
     path = os.path.join(OUT_DIR, "trophy_k2se.3mf")
     k2se_3mf.write_project(path, plates, K2SE_COLOURS, K2SE_PROCESS, K2SE_FLUSH,
-                           "African club trophy", [i for i in imgs if os.path.exists(i)])
+                           "African club trophy", [i for i in imgs if os.path.exists(i)],
+                           towers=[(150, 150), (150, 150), (170, 90)])
     print("Creality K2 SE project:", path)
 
 

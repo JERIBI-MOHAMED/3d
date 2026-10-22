@@ -125,10 +125,11 @@ def _mesh_xml(oid, verts, tris, paint):
     return "\n".join(rows)
 
 
-def write_project(path, plates, filaments, overrides, flush, title, thumbnails=()):
+def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(), towers=None):
     """plates: [(plate name, [part, ...])], part = dict(name, verts, tris, extruder,
     xy (centre on the plate), paint (per triangle '' / '4' / '8' ...), settings {key: value},
-    assembly (4x4 matrix for the assembly view)). filaments: [(name, '#RRGGBB')]."""
+    assembly (4x4 matrix for the assembly view)). filaments: [(name, '#RRGGBB')].
+    towers: prime tower position (x, y) per plate."""
     objects, oid = [], 0
     for p_idx, (_, parts) in enumerate(plates):
         origin = plate_origin(p_idx, len(plates))
@@ -204,7 +205,7 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
     cfg += ['  </assemble>', '</config>']
 
     settings = project_settings([c for _, c in filaments], overrides, flush,
-                                [(150, 150)] * len(plates))
+                                towers or [(150, 150)] * len(plates))
     rels_model = ['<?xml version="1.0" encoding="UTF-8"?>',
                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">']
     rels_model += [f' <Relationship Target="/3D/Objects/object_{o["id"]}.model" Id="rel-{i + 1}" '

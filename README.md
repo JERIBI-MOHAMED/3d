@@ -40,28 +40,34 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 
 # African club trophy replica (`trophy_blender.py`)
 
-Silver ribbon loop with gold stripes holding a gold ball with a raised Africa map, on a flared foot.
-Shape measured on a reference photo (all sizes in units of the ball diameter, derived from `HEIGHT`):
-assembled it stands **210 mm** tall, 75 mm wide (ball Ø52.5). Change `HEIGHT` for another size. Run headless with `blender -b -P trophy_blender.py -- ./stl`
-(or `pip install bpy` and `python3 trophy_blender.py -- ./stl`).
+Silver vase-shaped body whose teardrop opening is cut through it front to back; the two arms are
+thick gold-striped shells that cradle a gold ball with a raised Africa map; flared silver foot.
+Shape measured on a turntable video (front view: widths and opening, side view: depth), all sizes
+in units of the ball diameter derived from `HEIGHT`: assembled it stands **210 mm** tall,
+61 x 45 mm (ball Ø48.4). Change `HEIGHT` for another size. Run headless with
+`blender -b -P trophy_blender.py -- ./stl` (or `pip install bpy` and `python3 trophy_blender.py -- ./stl`).
 
 | Part | STL | Size (mm) | Print |
 |---|---|---|---|
-| Foot with D-shaped spigot | `trophy_base.stl` | Ø61 x 74 | upright, no supports, silver |
-| Collar ring | `trophy_ring.stl` | Ø24.6 x 4.2 | flat, gold |
-| Ribbon loop | `trophy_body.stl` | 75 x 22.5 x 137 | upright on the neck, no supports, **brim 8 mm**, silver |
-| Ball, one piece | `trophy_ball.stl` | Ø52.5 | tree supports under the bottom, gold |
-| Ball, split (no supports) | `trophy_ball_top.stl` + `trophy_ball_bottom.stl` | Ø52.5 x 27 each | flat face down, gold |
+| Foot with D-shaped spigot | `trophy_base.stl` | Ø56 x 71 | upright, no supports, silver |
+| Collar ring | `trophy_ring.stl` | Ø25.6 x 4.2 | flat, gold |
+| Body, front + back halves | `trophy_body_front.stl` + `trophy_body_back.stl` | 61 x 23 x 140 each | lying flat on the cut face, no supports |
+| Ball, split (no supports) | `trophy_ball_top.stl` + `trophy_ball_bottom.stl` | Ø48.4 x 25 each | flat face down, gold |
+| Ball, one piece | `trophy_ball.stl` | Ø48.4 | tree supports under the bottom, gold |
+| Whole body (reference) | `trophy_body.stl` | 61 x 45 x 140 | not for printing: the ball can't go in |
 
-Gold stripes are raised 0.8 mm above the silver ones, so a gold paint marker (or a silk-gold
-filament change at the layer where they start) gives the two-tone look.
+Gold stripes are raised 0.8 mm above the silver ones, so a gold paint marker (or the two-colour
+plate below) gives the two-tone look.
 
-Assembly: ring over the spigot, body onto the spigot (the flat faces the back, so the V faces front).
-Split ball: glue the halves with 2 pieces of 1.75 mm filament in the alignment holes.
-Slide the ball into the loop from the front, then push a 1.75 mm filament pin (~13 mm: 5.5 mm arm + 8 mm ball) through each
-arm's outer edge into the ball and trim flush.
-Fit checks: ball 0.3 mm clear of the arms everywhere (slides in from the front), pin channels straight
-through both arms into 8 mm holes in the ball, spigot 0.3 mm clearance in the socket.
+Assembly: glue the ball halves (2 pieces of 1.75 mm filament in the alignment holes). Put 5 pieces
+of 1.75 mm filament, 7 mm long, in the back half's alignment holes, lay the ball in the back half's
+seats (the Africa map facing front and up), glue the front half on (CA or epoxy) - the opening is
+narrower than the ball, so the ball is held for good. Then ring over the spigot and the body onto
+the spigot (the flat faces the back, so the V faces front).
+Fit checks: ball 0.3 mm clear of its seats, the Africa relief 4 mm clear of the arms, the opening
+22.3 mm half-width above and below the ball (radius 24.2) so it can't fall out, the ball lays into
+the back half without touching it, ≥ 9.5 mm of material above every alignment hole, spigot 0.3 mm
+clearance in the socket.
 
 ## Creality K2 SE project (`stl/trophy_k2se.3mf`)
 
@@ -72,19 +78,15 @@ filament 2 = **gold silk** (`CR-Silk` profile, 220 °C nozzle / 60 °C bed). Loa
 | Plate | Parts | Filament |
 |---|---|---|
 | 1 | ball top + ball bottom (flat side down, 0.12 mm layers) + ring | gold |
-| 2 | base + body (stripes painted afterwards with a gold paint pen) | silver |
-| 3 | body as front + back halves lying flat, gold stripes printed on top (CFS) | silver + gold |
+| 2 | base + body halves (stripes painted afterwards with a gold paint pen) | silver |
+| 3 | body halves with the gold stripes printed (CFS) | silver + gold |
 
 Settings changed from the K2 SE system preset (marked as changed, so they survive loading):
 3 walls (Arachne), gyroid 15 %, outer wall 120 mm/s (silk shine), seam at the back,
-hole compensation +0.1 mm (pin, socket and ring fits), purge into infill; body: 10 mm brim.
-No supports anywhere. Use glue stick under the body (tall part on a Ø23 mm neck).
+hole compensation +0.1 mm (pin and ring fits), purge into infill. No supports anywhere.
 
-Print either plate 2's body (then colour the raised stripes with a gold paint pen) or plate 3.
-Plate 3 splits the body at its middle plane (`trophy_body_front.stl`, `trophy_body_back.stl`): lying
-flat, gold is needed only in 40 of its 70 layers, so ~40 filament changes instead of the ~740 an
-upright two-colour body needs (that one took 2 days 14 h and 540 g in Creality Print).
-Glue the halves (CA or epoxy) with 5 pieces of 1.75 mm filament, 7 mm long, in the alignment
-holes; the ball pin channel is formed by the two halves.
+Print the body halves of plate 2 (silver, then a gold paint pen) or of plate 3, not both.
+Plate 3 needs ~140 filament changes (the curved arms carry gold on every layer of the halves),
+about 11 h of changes and ~90 g of purge at the K2 SE's 135 s per change.
 `k2se_3mf.py` writes the project; `k2se_settings.json` is the K2 SE system profile flattened from
 Creality Print's official profiles.
