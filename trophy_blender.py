@@ -7,13 +7,15 @@ Usage
 In Blender : Scripting tab -> Open this file -> Run Script
 Headless   : blender -b -P trophy_blender.py -- [out_dir]
 
-Exports 6 printable parts (units = mm, assembled height = HEIGHT):
+Exports 8 printable parts (units = mm, assembled height = HEIGHT):
     trophy_base.stl         flared foot with a D-shaped spigot on top
     trophy_ring.stl         collar between foot and body (print in gold)
     trophy_body.stl         the ribbon loop; gold ribs (raised) / silver grooves
     trophy_ball.stl         one-piece ball with Africa map (needs supports)
     trophy_ball_top.stl     same ball split at the equator, no supports:
     trophy_ball_bottom.stl  glue the halves with 2 filament pins
+    trophy_body_front.stl   the body split front / back, for two-colour printing lying
+    trophy_body_back.stl    flat (stripes up); glue with 5 filament pins
 and trophy_k2se.3mf, a coloured Creality Print project for the K2 SE (needs k2se_3mf.py).
 The ball slides into the loop from the front and is locked by 2 pins
 (1.75 mm filament) pushed through the arms into the ball.
@@ -68,6 +70,9 @@ PIN_D = 1.95             # pin hole for 1.75 mm filament (mm)
 PIN_IN_BALL = 8.0        # pin depth in the ball (mm)
 ALIGN_R = 0.25           # alignment pins of the split ball, at y = +-ALIGN_R*D
 ALIGN_DEPTH = 4.0        # per half (mm)
+
+BODY_ALIGN = [(0.0, 0.6), (0.545, 1.6), (-0.545, 1.6), (0.575, 2.1), (-0.575, 2.1)]  # (x, z) D
+BODY_ALIGN_DEPTH = 3.5   # alignment pin holes of the split body, per half (mm)
 
 SEAM_W = 1.2             # soccer-ball seam groove width (mm)
 SEAM_DEPTH = 0.6         # seam depth (mm)
@@ -601,6 +606,35 @@ def split_ball(ball):
     return halves
 
 
+def split_body(body):
+    """Front and back halves (cut at y = 0) for two-colour printing: each half lies flat on
+    its cut face with the stripes up, so only its top layers need the gold filament.
+    The ball pin channel lies in the cut; 5 holes take 1.75 mm filament alignment pins."""
+    halves = []
+    big = 300
+    for name, y0, y1 in (("trophy_body_front", -big, 0), ("trophy_body_back", 0, big)):
+        half = body.copy()
+        half.data = body.data.copy()
+        half.name = half.data.name = name
+        bpy.context.scene.collection.objects.link(half)
+        boolean(half, box("cut", (-big, y0, -big), (big, y1, big)), "INTERSECT")
+        pins = [cylinder("align", (x * D, -BODY_ALIGN_DEPTH - 0.3, z * D),
+                         (x * D, BODY_ALIGN_DEPTH + 0.3, z * D), PIN_D / 2) for x, z in BODY_ALIGN]
+        boolean(half, join("align", pins), "DIFFERENCE")
+        halves.append(half)
+    return halves
+
+
+def stripe_paint(obj):
+    """Per triangle: True on the gold stripes of the flat face (not on the edges)."""
+    v, t, _ = mesh_arrays(obj)
+    _, guide, edge = body_outline()
+    c = v[t].mean(1)
+    gold = gold_mask(*ribbon(v[:, [0, 2]], guide, edge))[t].mean(1) > 0.5
+    face = np.abs(c[:, 1]) > thickness(c[:, 2]) - RIB_STEP - 0.4
+    return gold & face
+
+
 # ----------------------------------------------------------------- FOOT + RING
 def build_base():
     h, r0, rn = BASE_H * D, BASE_R * D, NECK_R * D
@@ -681,6 +715,10 @@ def assemble(base, ring, body, ball, halves=()):
     base.data.materials.append(metal("silver", silver, 0.18))
     for o in (ring, ball, *halves):
         o.data.materials.append(bpy.data.materials.get("gold") or metal("gold", gold, 0.22))
+    for o in halves:
+        if o.name.startswith("trophy_body"):
+            o.data.materials.clear()
+            o.data.materials.append(bpy.data.materials.get("silver"))
     body.data.materials.append(body_material(gold, silver))
     for o in parts:
         for poly in o.data.polygons:
@@ -703,8 +741,8 @@ def mesh_arrays(obj, attr=None):
     return verts, tris, vals
 
 
-def export_k2se(base, ring, body, top, bottom):
-    """Creality Print project for the K2 SE: 3 plates, colours, two-colour body."""
+def export_k2se(base, ring, body, top, bottom, front, back):
+    """Creality Print project for the K2 SE: 3 plates, colours, two-colour body halves."""
     here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else ""
     sys.path.insert(0, here)
     try:
@@ -714,28 +752,33 @@ def export_k2se(base, ring, body, top, bottom):
         return
     z_ring, z_body = BASE_H * D, BASE_H * D + RING_H
 
-    def part(obj, extruder, xy, settings=None, flip=False, z=0.0, paint=False):
-        v, t, g = mesh_arrays(obj, "gold" if paint else None)
-        if flip:                                       # flat face down on the bed
-            v = v * [1, -1, -1]
-        asm = np.eye(4)
+    def part(obj, extruder, xy, settings=None, rot=np.eye(3), z=0.0, paint=None):
+        """rot: print orientation (rotation applied to the model); paint: gold triangles."""
+        v, t, _ = mesh_arrays(obj)
+        asm = np.eye(4)                                # print pose -> assembled trophy
+        asm[:3, :3] = rot.T
         asm[2, 3] = z
-        return dict(name=obj.name, verts=v, tris=t, extruder=extruder, xy=xy,
+        return dict(name=obj.name, verts=v @ rot.T, tris=t, extruder=extruder, xy=xy,
                     settings=settings or {}, assembly=asm,
-                    paint=np.where(g[t].mean(1) > 0.5, "8", "") if paint else None)
+                    paint=None if paint is None else np.where(paint, "8", ""))
+
+    flip = np.diag([1.0, -1.0, -1.0])                  # ball bottom: flat face down
+    face_down = {"trophy_body_front": np.array([[1.0, 0, 0], [0, 0, 1], [0, -1, 0]]),
+                 "trophy_body_back": np.array([[1.0, 0, 0], [0, 0, -1], [0, 1, 0]])}
 
     imgs = [os.path.join(here, "images", n + ".png")
             for n in ("trophy_ball", "trophy_front", "trophy_three_quarter")]
     plates = [
         ("Gold - ball halves + ring", [part(top, 2, (55, 107), K2SE_BALL, z=z_body + ZB),
-                                       part(bottom, 2, (122, 107), K2SE_BALL, flip=True,
+                                       part(bottom, 2, (122, 107), K2SE_BALL, flip,
                                             z=z_body + ZB),
                                        part(ring, 2, (182, 107), z=z_ring)]),
         ("Silver - base + body (paint the stripes)", [part(base, 1, (60, 107)),
                                                       part(body, 1, (150, 107), K2SE_BODY,
                                                            z=z_body)]),
-        ("Two-colour body - CFS gold stripes", [part(body, 1, (90, 107), K2SE_BODY, z=z_body,
-                                                     paint=True)]),
+        ("Two-colour body halves - glue together", [
+            part(h, 1, xy, rot=face_down[h.name], z=z_body, paint=stripe_paint(h))
+            for h, xy in ((front, (52, 100)), (back, (136, 100)))]),
     ]
     path = os.path.join(OUT_DIR, "trophy_k2se.3mf")
     k2se_3mf.write_project(path, plates, K2SE_COLOURS, K2SE_PROCESS, K2SE_FLUSH,
@@ -747,7 +790,7 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     base, ring, body, ball = build_base(), build_ring(), build_body(), build_ball()
-    halves = split_ball(ball)
+    halves = split_ball(ball) + split_body(body)
     parts = (base, ring, body, ball, *halves)
     for o in parts:
         export_stl(o, os.path.join(OUT_DIR, o.name + ".stl"))

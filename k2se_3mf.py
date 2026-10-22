@@ -138,7 +138,7 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
             centre = (lo + hi) / 2
             oid += 2
             objects.append(dict(part, id=oid, mesh_id=oid - 1, plate=p_idx + 1,
-                                local=v - centre,
+                                local=v - centre, centre=centre,
                                 pos=origin + [part["xy"][0], part["xy"][1], (hi[2] - lo[2]) / 2]))
 
     model = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -196,7 +196,8 @@ def write_project(path, plates, filaments, overrides, flush, title, thumbnails=(
         cfg.append('  </plate>')
     cfg.append('  <assemble>')
     for o in objects:
-        m = np.asarray(o.get("assembly", np.eye(4)), float)
+        m = np.asarray(o.get("assembly", np.eye(4)), float).copy()
+        m[:3, 3] += m[:3, :3] @ o["centre"]            # meshes are stored centred
         t = " ".join(f"{v:.6g}" for v in list(m[:3, :3].T.ravel()) + list(m[:3, 3]))
         cfg.append(f'   <assemble_item object_id="{o["id"]}" instance_id="0" '
                    f'transform="{t}" offset="0 0 0" />')
