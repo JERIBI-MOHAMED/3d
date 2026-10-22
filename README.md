@@ -51,7 +51,7 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
 The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|sleep|all]`
 
 Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
@@ -126,3 +126,16 @@ The top 5 layers hold both colors, so the filament changes on every one of those
 The sigil is drawn inverted in the image: black strokes on the light moon, white strokes where it crosses the dark maria. So it's kept as part of the image, not redrawn. Its 0.7-0.8 mm strokes print as they are.
 The moon texture is cleaned to what a 0.4 mm nozzle prints: specks under 0.45 x 0.45 mm and lines thinner than 0.37 mm (either color) are dropped.
 Print exactly like the raised Esperance keychain: `stl/moon_keychain_2color.3mf` opens with `black_base` on filament 2 (black) and `white_relief` on filament 1 (white). There's one change, at 3.40 mm.
+
+### Sleep Token keychain (`sleep`), like the mockup
+
+Rebuilt from the mockup photo `keychain/sleep_token_reference.jpg`. **38.7 x 53.7 x 3.6 mm**, with a **2.6 mm black base** and the white raised 1.0 mm (the mockup says ~54 x ~3.5 mm).
+- Sigil: traced from its left half and mirrored, so it's exactly symmetric. The right roof runs to the moon's edge like the left one.
+- Moon: the left crescent is two fitted circles. The textured moon on the right is traced, with craters kept down to printable size and a 0.6 mm black halo around the sigil.
+- Black base: the disc plus a rounded lobe around the hanging spikes, a 1.5 mm outline and the ring tab (4.5 mm hole).
+
+**K2 SE + CFS (1A white, 1B black):**
+1. Open `stl/sleep_keychain_2color.3mf`. It's preset with `black_base` on filament 2 (black) and `white_relief` on filament 1 (white). Sync the CFS first.
+2. Process **0.20mm Standard @Creality K2 SE**: Arachne walls, "Detect thin walls" on, 3 walls, top 5 / bottom 4 layers, 15-25 % gyroid, no supports, no brim. Ironing is optional (it adds time).
+3. Preview: black up to **2.60 mm**, white only from **2.80 mm**. Note the color change is lower than the other keychains (3.40 mm) because the base is thinner. That's one filament change.
+4. Without the CFS: slice `stl/sleep_keychain_single_color.stl`, add a **pause at 2.80 mm**, start in black and switch to white.

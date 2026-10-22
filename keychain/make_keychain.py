@@ -10,6 +10,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   est  Esperance Sportive de Tunis, black + white (from the Illustrator file) -> stl/est_keychain_*
   est_flat  the same crest with a flat top: white inlaid flush in the black (needs a multi-color unit, e.g. CFS)
   moon  moon with sigil, black + white (from a black/white image) -> stl/moon_keychain_*
+  sleep  Sleep Token sigil + crescent moon, black + white, 3.6 mm (rebuilt from a mockup photo) -> stl/sleep_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -479,6 +480,78 @@ def crest_moon():
     return top(circle), top(shapes.intersection(circle))
 
 
+def crest_sleep():
+    """Sleep Token sigil over a crescent moon, rebuilt from the mockup photo sleep_token_reference.jpg.
+
+    Measured on the photo (pixels of the front view): outer circle center (258, 300.1) R 173.1; left crescent =
+    outer circle minus a circle shifted up (thickness 21.64 + 2.16 cos - 11.08 sin, fitted, rms 0.8 px), kept
+    on the left up to the leftmost spike; terminator of the textured moon = circle (189.9, 336.7) R 193.3.
+    The sigil is traced from its left half and mirrored about its own axis (x = 255.75), so it is exactly
+    symmetric; the right roof is extended to the moon's edge like the left one. The moon texture is traced,
+    cleaned to printable spots and kept 0.6 mm away from the sigil (black halo), as in the mockup.
+    """
+    import cv2
+    from PIL import Image
+    from scipy import ndimage as ndi
+    D_MM = 35.5                                    # outer white circle, gives ~54 mm total height like the mockup
+    cx, cy, R0 = 258.0, 300.1, 173.1
+    s = D_MM / (2 * R0)                            # mm per photo pixel
+    x0, y0, F = 60, 110, 4                         # crop of the front view, upsampling for smooth outlines
+    g = np.array(Image.open(os.path.join(HERE, "sleep_token_reference.jpg")).convert("L")).astype(np.float32)
+    up = cv2.resize(g[y0:570, x0:460], None, fx=F, fy=F, interpolation=cv2.INTER_CUBIC)
+    W = up > 150
+    pmm = lambda x, y: ((x - cx) * s, -(y - cy) * s)          # photo pixel -> mm (origin at circle center, y up)
+    to_mm = lambda geom: affinity.translate(geom, (x0 - cx) * s, -(y0 - cy) * s)  # mask_to_shapes frame -> mm
+
+    D0 = Point(0, 0).buffer(R0 * s, 256)
+    D1 = Point(*pmm(cx - 2.16, cy - 11.08)).buffer((R0 - 21.64) * s, 256)
+    Dt = Point(*pmm(189.9, 336.7)).buffer(193.3 * s, 256)
+    axis = pmm(255.75, 0)[0]
+    big = 3 * SHIELD_H
+    left_of = lambda x: box(-big, -big, x, big)
+    # crescent only on the left, ending at the leftmost spike (x 163 px) in the lower half
+    crescent = D0.difference(D1).intersection(left_of(axis))
+    crescent = crescent.difference(box(pmm(163, 0)[0], -big, big, pmm(0, 350)[1]))
+    texture_region = D0.difference(Dt)
+
+    # sigil: left half of the trace, mirrored
+    trace = to_mm(mask_to_shapes(W, s / F))
+    below_top = box(-big, -big, big, pmm(0, 200)[1])               # the sigil starts at y 210 px (central spike)
+    left = trace.intersection(left_of(axis)).intersection(below_top).difference(crescent).difference(texture_region)
+    # left roof, extended to the moon's edge (centroid and direction measured on the photo)
+    c0, d = np.array(pmm(152.8, 281.9)), np.array([-0.684, -0.730])
+    roof_ext = LineString([c0, c0 + d * R0 * s]).buffer(11.1 * s / 2, cap_style="flat").intersection(D0)
+    left = unary_union([left, roof_ext])
+    sigil = unary_union([left, affinity.scale(left, -1, 1, origin=(axis, 0))]).buffer(0.01).buffer(-0.01)
+
+    # moon texture: traced inside the region, specks below the nozzle removed, 0.6 mm halo around the sigil
+    yy, xx = np.mgrid[:W.shape[0], :W.shape[1]]
+    px, py = x0 + xx / F, y0 + yy / F
+    region = (np.hypot(px - cx, py - cy) < R0) & (np.hypot(px - 189.9, py - 336.7) > 193.3)
+    tex = W & region
+    min_area = (0.45 / (s / F)) ** 2
+    r = int(round(0.185 / (s / F)))
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+
+    def drop_small(m):
+        lab, n = ndi.label(m)
+        return m if n == 0 else np.r_[False, ndi.sum(m, lab, range(1, n + 1)) >= min_area][lab]
+
+    for _ in range(2):
+        tex = drop_small(tex)
+        tex = ~drop_small(~tex & region) & region
+        tex = cv2.morphologyEx(tex.astype(np.uint8), cv2.MORPH_OPEN, k).astype(bool)
+        tex = cv2.morphologyEx(tex.astype(np.uint8), cv2.MORPH_CLOSE, k).astype(bool) & region
+    texture = to_mm(mask_to_shapes(tex, s / F)).intersection(D0).difference(sigil.buffer(0.6))
+
+    white = unary_union([sigil, crescent, texture])
+    shield = unary_union([D0, sigil]).buffer(1.2).buffer(-1.2)      # disc + rounded lobe around the spikes
+    black = thicken(shield.difference(white), MIN_STROKE / 2)
+    white = thicken(shield.difference(black), 0.17).intersection(shield)
+    top = shield.bounds[3]
+    return affinity.translate(shield, 0, -top), affinity.translate(white, 0, -top)
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -496,6 +569,9 @@ LOGOS = {
                      relief_t=1.0, colors=("#0d0d0d", "#f2f2f2"), flat=True),
     "moon": dict(name="Moon", crest=crest_moon, base="black", top="white", relief_t=1.0,
                  colors=("#0d0d0d", "#f2f2f2")),
+    # like the mockup: ~54 mm tall, 3.6 mm thick (2.6 mm base + 1.0 mm white)
+    "sleep": dict(name="Sleep Token", crest=crest_sleep, base="black", top="white", relief_t=1.0, base_t=2.6,
+                  colors=("#0d0d0d", "#f2f2f2"), border=1.5),
 }
 
 
@@ -610,12 +686,13 @@ def make(key):
     logo = LOGOS[key]
     base2d, white2d = build_2d(logo)
     relief_t = logo["relief_t"]
-    base = extrude(base2d, BASE_T, 0)
-    white = extrude(white2d, relief_t, BASE_T)
+    base_t = logo.get("base_t", BASE_T)
+    base = extrude(base2d, base_t, 0)
+    white = extrude(white2d, relief_t, base_t)
     flat = logo.get("flat", False)
     if flat:
         # black fills the top layer everywhere the white is not: one flat face, two colors in the same layers
-        base = trimesh.boolean.union([base, extrude(base2d.difference(white2d), relief_t, BASE_T)], engine="manifold")
+        base = trimesh.boolean.union([base, extrude(base2d.difference(white2d), relief_t, base_t)], engine="manifold")
     single = trimesh.boolean.union([base, white], engine="manifold")
     assert base.is_volume and white.is_volume and single.is_volume
     out = os.path.join(ROOT, "stl")
@@ -629,7 +706,7 @@ def make(key):
         single.export(f"{pre}_single_color.stl")
     write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain",
               [(base_name, base, FILAMENT[logo["base"]]), (top_name, white, FILAMENT[logo["top"]])])
-    preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, BASE_T + relief_t)
+    preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, base_t + relief_t)
     for n, m in [("base", base), ("white", white), ("single", single)]:
         print(key, n, "watertight", m.is_watertight, "extents", np.round(m.extents, 2), "volume", round(m.volume, 1))
 
