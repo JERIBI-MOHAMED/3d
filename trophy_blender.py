@@ -7,7 +7,7 @@ Usage
 In Blender : Scripting tab -> Open this file -> Run Script
 Headless   : blender -b -P trophy_blender.py -- [out_dir]
 
-Exports 6 printable parts (units = mm, total height ~ 4 x BALL_D):
+Exports 6 printable parts (units = mm, assembled height = HEIGHT):
     trophy_base.stl         flared foot with a D-shaped spigot on top
     trophy_ring.stl         collar between foot and body (print in gold)
     trophy_body.stl         the ribbon loop; gold ribs (raised) / silver grooves
@@ -29,7 +29,7 @@ import bmesh  # noqa: E402 (must come after bpy when run as a module)
 import numpy as np
 
 # ----------------------------------------------------------------- PARAMETERS
-BALL_D = 65.0            # ball diameter (mm); everything scales with it -> ~258 mm tall
+HEIGHT = 210.0           # assembled height (mm); everything scales with it (ball ~ HEIGHT / 4)
 GAP = 0.3                # ball <-> arms clearance (mm)
 
 # body (loop) outline, x = half width, z = height above the ring, both in D
@@ -87,7 +87,7 @@ if "--" in sys.argv:
         OUT_DIR = extra[0]
 # ----------------------------------------------------------------------------
 
-D = BALL_D
+D = (HEIGHT - RING_H - AFRICA_H) / (BASE_H + BALL_Z + 0.5)   # ball diameter (mm)
 R_BALL = D / 2
 R_HOLE = R_BALL + GAP
 ZB = BALL_Z * D

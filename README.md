@@ -41,24 +41,24 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 # African club trophy replica (`trophy_blender.py`)
 
 Silver ribbon loop with gold stripes holding a gold ball with a raised Africa map, on a flared foot.
-Shape measured on a reference photo (all sizes in units of the ball diameter `BALL_D`, default 65 mm):
-assembled it stands **~258 mm** tall, 93 mm wide. Run headless with `blender -b -P trophy_blender.py -- ./stl`
+Shape measured on a reference photo (all sizes in units of the ball diameter, derived from `HEIGHT`):
+assembled it stands **210 mm** tall, 75 mm wide (ball Ø52.5). Change `HEIGHT` for another size. Run headless with `blender -b -P trophy_blender.py -- ./stl`
 (or `pip install bpy` and `python3 trophy_blender.py -- ./stl`).
 
 | Part | STL | Size (mm) | Print |
 |---|---|---|---|
-| Foot with D-shaped spigot | `trophy_base.stl` | Ø75 x 87 | upright, no supports, silver |
-| Collar ring | `trophy_ring.stl` | Ø30 x 4.2 | flat, gold |
-| Ribbon loop | `trophy_body.stl` | 93 x 28 x 169 | upright on the neck, no supports, **brim 8 mm**, silver |
-| Ball, one piece | `trophy_ball.stl` | Ø65 | tree supports under the bottom, gold |
-| Ball, split (no supports) | `trophy_ball_top.stl` + `trophy_ball_bottom.stl` | Ø65 x 33 each | flat face down, gold |
+| Foot with D-shaped spigot | `trophy_base.stl` | Ø61 x 74 | upright, no supports, silver |
+| Collar ring | `trophy_ring.stl` | Ø24.6 x 4.2 | flat, gold |
+| Ribbon loop | `trophy_body.stl` | 75 x 22.5 x 137 | upright on the neck, no supports, **brim 8 mm**, silver |
+| Ball, one piece | `trophy_ball.stl` | Ø52.5 | tree supports under the bottom, gold |
+| Ball, split (no supports) | `trophy_ball_top.stl` + `trophy_ball_bottom.stl` | Ø52.5 x 27 each | flat face down, gold |
 
 Gold stripes are raised 0.8 mm above the silver ones, so a gold paint marker (or a silk-gold
 filament change at the layer where they start) gives the two-tone look.
 
 Assembly: ring over the spigot, body onto the spigot (the flat faces the back, so the V faces front).
 Split ball: glue the halves with 2 pieces of 1.75 mm filament in the alignment holes.
-Slide the ball into the loop from the front, then push a 1.75 mm filament pin (~15 mm: 7 mm arm + 8 mm ball) through each
+Slide the ball into the loop from the front, then push a 1.75 mm filament pin (~13 mm: 5.5 mm arm + 8 mm ball) through each
 arm's outer edge into the ball and trim flush.
 Fit checks: ball 0.3 mm clear of the arms everywhere (slides in from the front), pin channels straight
 through both arms into 8 mm holes in the ball, spigot 0.3 mm clearance in the socket.
