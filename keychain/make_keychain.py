@@ -12,6 +12,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   moon  moon with sigil, black + white (from a black/white image) -> stl/moon_keychain_*
   sleep  Sleep Token sigil + crescent moon, black + white, 3.6 mm (rebuilt from a mockup photo) -> stl/sleep_keychain_*
   mafia  gangster bust in a fedora, black + white (from a grey-on-black image) -> stl/mafia_keychain_*
+  flame  red flame devil, black cut-out base + red relief -> stl/flame_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -578,6 +579,30 @@ def crest_mafia():
     return top(disk), top(white)
 
 
+def crest_flame():
+    """Red flame-devil logo on a textured black photo: the red becomes the relief, the base follows its outline.
+
+    The logo is SHIELD_H tall; the base is the logo with its inner gaps closed (one solid piece). The ring tab
+    sits on the tallest flame tip, so that tip is placed at x = 0.
+    """
+    from PIL import Image
+    from scipy import ndimage as ndi
+    a = np.array(Image.open(os.path.join(HERE, "flame_devil_reference.jpg")).convert("RGB")).astype(int)
+    red = (a[..., 0] > 120) & (a[..., 1] < 90) & (a[..., 2] < 90)
+    lab, n = ndi.label(red)
+    sizes = ndi.sum(red, lab, range(1, n + 1))
+    red = np.r_[False, sizes >= 0.01 * sizes.max()][lab]                # the logo's pieces, no specks
+    ys, xs = np.nonzero(red)
+    px_mm = SHIELD_H / (ys.max() - ys.min() + 1)
+    logo = mask_to_shapes(red, px_mm, sigma=1.5)
+    tip_x = xs[ys == ys.min()].mean() * px_mm
+    logo = affinity.translate(logo, -tip_x, -logo.bounds[3])
+    shield = logo.buffer(1.5).buffer(-1.5)                                 # gaps between the pieces closed
+    black = thicken(shield.difference(logo), MIN_STROKE / 2)
+    white = thicken(shield.difference(black), 0.17).intersection(shield)
+    return shield, white
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -600,6 +625,9 @@ LOGOS = {
                   colors=("#0d0d0d", "#f2f2f2"), border=1.5),
     "mafia": dict(name="Mafia", crest=crest_mafia, base="black", top="white", relief_t=1.0,
                   colors=("#0d0d0d", "#f2f2f2")),
+    # cut-out: the tab overlaps the top flame tip for strength
+    "flame": dict(name="Flame devil", crest=crest_flame, base="black", top="red", relief_t=1.0,
+                  colors=("#0d0d0d", "#c8101a"), border=1.5, tab_overlap=3.5),
 }
 
 
