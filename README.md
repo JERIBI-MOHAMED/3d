@@ -9,7 +9,8 @@ All dimensions are parameters at the top of the script.
 Print notes
 - Shade: upright, no supports, 0.4 mm nozzle, 0.2 mm layers, 2-3 perimeters, 0% infill, white/natural PLA or PETG (translucent). Prefer a cool LED bulb (PLA softens ~60 C).
 - Base: upright. Cap: flat on the bed. 4 x M3x16 screws (self-tapping in 2.6 mm pilot holes).
-- E14 holder fits the 36 mm hole (set `SOCKET_HOLE` for E27). Cable exits through the side slot.
+- E14 holder fits the 36 mm hole. Cable exits through the side slot.
+- **E27:** `stl/lamp_base_e27.stl` is the same base with a **40.5 mm** hole, for E27 holders with a threaded outer ring. It's cut from `lamp_base.stl`, watertight; the cap and shade are unchanged. The ring clamps through 10 mm (4 mm top plate + 6 mm centering lip). In the script, set `SOCKET_HOLE = 40.5`.
 - Set `TEXTURE = False` for a light, smooth shade.
 
 # Ribbed jar with bayonet lid (`jar_blender.py`)

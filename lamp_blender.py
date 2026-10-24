@@ -38,7 +38,7 @@ BASE_HEIGHT = 55.0       # base height (mm)
 BASE_WALL = 3.0          # base wall (mm)
 BASE_TOP = 4.0           # base top plate thickness (mm)
 BASE_BEVEL = 5.0         # rounded edges (mm)
-SOCKET_HOLE = 36.0       # hole for lamp holder: E14 ~ 36, E27 ~ 44 (mm)
+SOCKET_HOLE = 36.0       # hole for lamp holder: E14 ~ 36, E27 ring-mount ~ 40.5 (mm)
 SPIGOT_H = 6.0           # lip that centers the shade (mm)
 CLEARANCE = 0.3          # fit tolerance (mm)
 
