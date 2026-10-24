@@ -11,6 +11,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   est_flat  the same crest with a flat top: white inlaid flush in the black (needs a multi-color unit, e.g. CFS)
   moon  moon with sigil, black + white (from a black/white image) -> stl/moon_keychain_*
   sleep  Sleep Token sigil + crescent moon, black + white, 3.6 mm (rebuilt from a mockup photo) -> stl/sleep_keychain_*
+  mafia  gangster bust in a fedora, black + white (from a grey-on-black image) -> stl/mafia_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -552,6 +553,31 @@ def crest_sleep():
     return affinity.translate(shield, 0, -top), affinity.translate(white, 0, -top)
 
 
+def crest_mafia():
+    """Gangster bust (grey on black) on a black disc: the grey parts become the raised white.
+
+    The figure is centered on its smallest enclosing circle and scaled to 90 % of the disc, so a margin of black
+    stays around it. Specks under 0.45 x 0.45 mm are dropped and lines/gaps under the nozzle width are widened.
+    """
+    import cv2
+    from PIL import Image
+    from scipy import ndimage as ndi
+    g = np.array(Image.open(os.path.join(HERE, "mafia_reference.jpg")).convert("L")).astype(np.float32)
+    F = 4
+    light = cv2.resize(g, None, fx=F, fy=F, interpolation=cv2.INTER_CUBIC) > 100
+    ys, xs = np.nonzero(light)
+    (cx, cy), r_px = cv2.minEnclosingCircle(np.c_[xs, ys].astype(np.float32))
+    px_mm = 0.9 * SHIELD_H / 2 / r_px
+    lab, n = ndi.label(light)
+    light = np.r_[False, ndi.sum(light, lab, range(1, n + 1)) >= (0.45 / px_mm) ** 2][lab]
+    figure = affinity.translate(mask_to_shapes(light, px_mm), -cx * px_mm, cy * px_mm)
+    disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
+    black = thicken(disk.difference(figure), MIN_STROKE / 2)
+    white = thicken(disk.difference(black), 0.17).intersection(disk)
+    top = lambda geom: affinity.translate(geom, 0, -SHIELD_H / 2)     # top edge at y=0
+    return top(disk), top(white)
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -572,6 +598,8 @@ LOGOS = {
     # like the mockup: ~54 mm tall, 3.6 mm thick (2.6 mm base + 1.0 mm white)
     "sleep": dict(name="Sleep Token", crest=crest_sleep, base="black", top="white", relief_t=1.0, base_t=2.6,
                   colors=("#0d0d0d", "#f2f2f2"), border=1.5),
+    "mafia": dict(name="Mafia", crest=crest_mafia, base="black", top="white", relief_t=1.0,
+                  colors=("#0d0d0d", "#f2f2f2")),
 }
 
 
