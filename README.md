@@ -52,7 +52,7 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
 The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|sleep|mafia|flame|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|sleep|mafia|flame|lorenzo|all]`
 
 Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
@@ -151,3 +151,8 @@ Print exactly like the raised Esperance keychain: `stl/mafia_keychain_2color.3mf
 
 Cut-out keychain from `keychain/flame_devil_reference.jpg`, 36.6 x 59.5 x 4.2 mm. The logo is 50 mm tall and raised 1.0 mm in **red** on a 3.2 mm **black** base that follows its outline (1.5 mm border, gaps between the logo's pieces filled). The ring tab overlaps the tallest flame tip.
 `stl/flame_keychain_2color.3mf` is preset with `black_base` on filament 2 (black, 1B) and `red_relief` on filament 4 (red, 1D). There's one change, at **3.40 mm**. Without the CFS: single-color STL with a pause at 3.40 mm (black → red).
+
+### Lorenzo keychain (`lorenzo`)
+
+Ø50 mm black disc with the Lorenzo logo and dragon from `keychain/lorenzo_reference.jpg`, 52.4 x 60.9 x 4.2 mm: 3.2 mm black base, logo raised 1.0 mm in white (44.8 x 9.1 mm). Built with the same helper as the mafia keychain (`light_on_disc`).
+`stl/lorenzo_keychain_2color.3mf` is preset with `black_base` on filament 2 (black) and `white_relief` on filament 1 (white). There's one change, at **3.40 mm**. Without the CFS: single-color STL with a pause at 3.40 mm.

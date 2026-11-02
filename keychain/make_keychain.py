@@ -13,6 +13,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   sleep  Sleep Token sigil + crescent moon, black + white, 3.6 mm (rebuilt from a mockup photo) -> stl/sleep_keychain_*
   mafia  gangster bust in a fedora, black + white (from a grey-on-black image) -> stl/mafia_keychain_*
   flame  red flame devil, black cut-out base + red relief -> stl/flame_keychain_*
+  lorenzo  Lorenzo logo with dragon, black disc + white relief -> stl/lorenzo_keychain_*
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -554,29 +555,40 @@ def crest_sleep():
     return affinity.translate(shield, 0, -top), affinity.translate(white, 0, -top)
 
 
-def crest_mafia():
-    """Gangster bust (grey on black) on a black disc: the grey parts become the raised white.
+def light_on_disc(fn, threshold=100, fill=0.9):
+    """Light artwork on a dark image -> raised white on a black disc.
 
-    The figure is centered on its smallest enclosing circle and scaled to 90 % of the disc, so a margin of black
-    stays around it. Specks under 0.45 x 0.45 mm are dropped and lines/gaps under the nozzle width are widened.
+    The artwork is centered on its smallest enclosing circle and scaled to `fill` of the disc, so a margin of
+    black stays around it. Specks under 0.45 x 0.45 mm are dropped and lines/gaps under the nozzle width are
+    widened.
     """
     import cv2
     from PIL import Image
     from scipy import ndimage as ndi
-    g = np.array(Image.open(os.path.join(HERE, "mafia_reference.jpg")).convert("L")).astype(np.float32)
+    g = np.array(Image.open(os.path.join(HERE, fn)).convert("L")).astype(np.float32)
     F = 4
-    light = cv2.resize(g, None, fx=F, fy=F, interpolation=cv2.INTER_CUBIC) > 100
+    light = cv2.resize(g, None, fx=F, fy=F, interpolation=cv2.INTER_CUBIC) > threshold
     ys, xs = np.nonzero(light)
     (cx, cy), r_px = cv2.minEnclosingCircle(np.c_[xs, ys].astype(np.float32))
-    px_mm = 0.9 * SHIELD_H / 2 / r_px
+    px_mm = fill * SHIELD_H / 2 / r_px
     lab, n = ndi.label(light)
     light = np.r_[False, ndi.sum(light, lab, range(1, n + 1)) >= (0.45 / px_mm) ** 2][lab]
-    figure = affinity.translate(mask_to_shapes(light, px_mm), -cx * px_mm, cy * px_mm)
+    art = affinity.translate(mask_to_shapes(light, px_mm), -cx * px_mm, cy * px_mm)
     disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
-    black = thicken(disk.difference(figure), MIN_STROKE / 2)
+    black = thicken(disk.difference(art), MIN_STROKE / 2)
     white = thicken(disk.difference(black), 0.17).intersection(disk)
     top = lambda geom: affinity.translate(geom, 0, -SHIELD_H / 2)     # top edge at y=0
     return top(disk), top(white)
+
+
+def crest_mafia():
+    """Gangster bust (grey on black) on a black disc: the grey parts become the raised white."""
+    return light_on_disc("mafia_reference.jpg")
+
+
+def crest_lorenzo():
+    """Lorenzo logo with the dragon (white on black) on a black disc."""
+    return light_on_disc("lorenzo_reference.jpg")
 
 
 def crest_flame():
@@ -628,6 +640,8 @@ LOGOS = {
     # cut-out: the tab overlaps the top flame tip for strength
     "flame": dict(name="Flame devil", crest=crest_flame, base="black", top="red", relief_t=1.0,
                   colors=("#0d0d0d", "#c8101a"), border=1.5, tab_overlap=3.5),
+    "lorenzo": dict(name="Lorenzo", crest=crest_lorenzo, base="black", top="white", relief_t=1.0,
+                    colors=("#0d0d0d", "#f2f2f2")),
 }
 
 
