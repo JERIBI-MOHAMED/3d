@@ -172,3 +172,10 @@ Rebuilt from a photo of a printed keychain (`keychain/kratos_reference.webp`), *
 **K2 SE + CFS:** `stl/kratos_keychain_3color.3mf` is preset with `white_base` on filament 1 (white, 1A), `black_relief` on 2 (black, 1B) and `red_relief` on 4 (red, 1D).
 White prints up to 3.20 mm. From 3.40 mm, each layer prints black and red, so expect about 5 extra black/red swaps (keep the prime tower on).
 Without the CFS: single-color STL, pause at 3.40 mm and switch to black. The mark is then black, so paint it red afterwards, or skip it.
+
+# Logo to SVG (`svg/raster_to_svg.py`)
+
+Traces a dark logo on a light background into an SVG with a **transparent background**:
+`python3 svg/raster_to_svg.py input.jpg output.svg [--color "#000000"] [--invert]`. Use `--invert` for light artwork on a dark background.
+It traces the image's anti-aliased edges 4x upsampled, with sub-pixel accuracy, smooths them and simplifies to 0.05 px. Shapes with holes use evenodd, and specks are dropped.
+- `svg/al_warsha_logo.svg`: the AL-WARSHA DESIGNS logo from `svg/al_warsha_reference.jpg`, black, 27 outlines, 499 x 238 px viewBox. It scales to any size.
