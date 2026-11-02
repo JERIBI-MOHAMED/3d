@@ -52,7 +52,7 @@ Fit checks (boolean): block/top 0 interference when seated, door swings freely 1
 Each keychain is a colored base with a key-ring tab (4.5 mm hole) and the crest's details raised on top in the second color. The crests sit on their shield plus a 1.2 mm outline.
 The Brand is a **cut-out**: the black base follows the symbol (1.5 mm outline), so the triangles inside the diamonds are open, and the ring tab overlaps the tip of the stem for strength.
 Regenerate after changing the parameters at the top of the script:
-`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|sleep|mafia|flame|lorenzo|lorenzo_tag|all]`
+`pip install shapely trimesh svgelements manifold3d mapbox_earcut matplotlib scipy && python3 keychain/make_keychain.py [css|ca|brand|est|est_flat|moon|sleep|mafia|flame|lorenzo|lorenzo_tag|kratos|all]`
 
 Files in `stl/`, `<p>` = `css`, `ca`, `brand` or `est`:
 
@@ -161,3 +161,14 @@ Cut-out keychain from `keychain/flame_devil_reference.jpg`, 36.6 x 59.5 x 4.2 mm
 
 Name-tag style instead of a disc, **73.5 x 18.0 x 5.2 mm**. The logo is 60 mm wide and raised **2.0 mm** in white, so the letters stand out. It sits on a 3.2 mm black base that follows the letters with a 3 mm rounded border, and the ring hole is on the left end.
 `stl/lorenzo_tag_keychain_2color.3mf` is preset with `black_base` on filament 2 and `white_relief` on filament 1. There's one change, at **3.40 mm** (black up to 3.20 mm, white from 3.40 to 5.20 mm). Without the CFS: single-color STL with a pause at 3.40 mm.
+
+### Kratos keychain (`kratos`), 3 colors
+
+Rebuilt from a photo of a printed keychain (`keychain/kratos_reference.webp`), **49.5 x 65.6 x 4.2 mm**: a 3.2 mm **white** base with the **black** line-art and the **red** mark raised 1.0 mm.
+- The photo was taken at an angle. An ellipse fitted to the round outline is stretched back to a circle.
+- Colors are read against the local white level, so the glare on the right doesn't wash out the black. The print texture's specks are filled.
+- The beard tip runs off the photo, so the outline is closed with a short point.
+
+**K2 SE + CFS:** `stl/kratos_keychain_3color.3mf` is preset with `white_base` on filament 1 (white, 1A), `black_relief` on 2 (black, 1B) and `red_relief` on 4 (red, 1D).
+White prints up to 3.20 mm. From 3.40 mm, each layer prints black and red, so expect about 5 extra black/red swaps (keep the prime tower on).
+Without the CFS: single-color STL, pause at 3.40 mm and switch to black. The mark is then black, so paint it red afterwards, or skip it.

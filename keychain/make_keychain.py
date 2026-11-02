@@ -15,6 +15,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   flame  red flame devil, black cut-out base + red relief -> stl/flame_keychain_*
   lorenzo  Lorenzo logo with dragon, black disc + white relief -> stl/lorenzo_keychain_*
   lorenzo_tag  the same logo as a name tag: base follows the letters, ring on the left, tall white letters
+  kratos  Kratos (God of War), white base + black lines + red mark, 3 colors (from a photo of a print)
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -632,6 +633,74 @@ def crest_lorenzo_tag():
     return shield, white
 
 
+def crest_kratos():
+    """Kratos keychain rebuilt from a photo of a printed one (kratos_reference.webp).
+
+    The photo is taken at an angle: an ellipse fitted to the round upper outline (center 304, 315; 526 x 447 px)
+    is stretched back to a circle. Inside the outline, red -> red mark, dark -> black lines, the rest -> white
+    base. The beard tip runs off the bottom of the photo, so the outline is closed with a short point there.
+    """
+    import cv2
+    from PIL import Image
+    from scipy import ndimage as ndi
+    a = np.array(Image.open(os.path.join(HERE, "kratos_reference.webp")).convert("RGB"))
+    F = 3
+    ex, ey, w_px, h_px = 304.0, 315.0, 526.0, 447.0
+    k = w_px / h_px
+    M = np.array([[F, 0, 0], [0, F * k, F * ey * (1 - k)]], np.float32)   # y stretched about the ellipse center
+    H, W = int(a.shape[0] * F * k + 1), a.shape[1] * F
+    img = cv2.warpAffine(a, M, (W, H), flags=cv2.INTER_CUBIC, borderValue=(0, 0, 0)).astype(int)
+    px_mm = SHIELD_H / (w_px * F)                                         # the round outline is 50 mm wide
+    cx, cy = ex * F, ey * F * k + F * ey * (1 - k)
+
+    def drop_small(m, area_mm2=0.2):
+        lab, n = ndi.label(m)
+        return m if n == 0 else np.r_[False, ndi.sum(m, lab, range(1, n + 1)) >= area_mm2 / px_mm ** 2][lab]
+
+    # outline: all large white pieces, joined and filled (the chain and ring are thin and drop out)
+    white = img.min(-1) > 150
+    op = cv2.morphologyEx(white.astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7 * F, 7 * F)))
+    big = drop_small(op.astype(bool), 30.0)
+    cl = cv2.morphologyEx(big.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31 * F, 31 * F)))
+    sil = ndi.binary_fill_holes(cl)
+    lab, n = ndi.label(sil)
+    sil = lab == (np.argmax(ndi.sum(sil, lab, range(1, n + 1))) + 1)
+
+    r, g, b = img[..., 0], img[..., 1], img[..., 2]
+    red = sil & (r > 110) & (r - g > 45) & (r - b > 35)
+    red = drop_small(ndi.binary_fill_holes(cv2.morphologyEx(red.astype(np.uint8), cv2.MORPH_CLOSE,
+                     cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))), 4.0)
+    # the photo shows the print's bumpy surface: smooth it, then fill white specks inside the black areas
+    gray = cv2.medianBlur(cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2GRAY), 2 * F + 1)
+    # the light falls unevenly (glare on the right): compare each pixel to the local white level
+    white_level = cv2.GaussianBlur(cv2.dilate(gray, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (41 * F, 41 * F))),
+                                   (0, 0), 15 * F).astype(float)
+    dark = sil & (gray < 0.62 * white_level) & ~red
+    specks = sil & ~dark & ~red & ~drop_small(sil & ~dark & ~red, 0.15)
+    dark |= specks
+    hole = (np.hypot(*np.mgrid[:H, :W][::-1] - np.array([318 * F, 112 * F * k + F * ey * (1 - k)])[:, None, None])
+            < 16 * F)                                                     # the printed keychain's own ring hole
+    dark &= ~hole
+    dark = drop_small(dark)
+    to_mm = lambda m: affinity.translate(mask_to_shapes(m, px_mm, sigma=1.5), -cx * px_mm, cy * px_mm)
+    outline = to_mm(sil).buffer(-0.3)
+    # close the cut-off beard tip: extend the bottom of the outline into a short point
+    xb0, yb0, xb1, yb1 = outline.bounds
+    bottom = outline.intersection(box(xb0, yb0, xb1, yb0 + 0.6))
+    if not bottom.is_empty:
+        bx0, _, bx1, _ = bottom.bounds
+        outline = unary_union([outline, Polygon([(bx0, yb0 + 0.6), (bx1, yb0 + 0.6), ((bx0 + bx1) / 2, yb0 - 2.5)])])
+    outline = outline.buffer(1.0).buffer(-1.0)
+    lines = to_mm(dark).intersection(outline.buffer(-0.6))
+    mark = to_mm(red).intersection(outline)
+    lines = thicken(lines, MIN_STROKE / 2)                                # black lines at least 0.42 mm
+    gaps = thicken(outline.difference(lines), 0.17)                       # white gaps at least 0.34 mm
+    lines = outline.difference(gaps).difference(mark)
+    top = outline.bounds[3]
+    t = lambda geom: affinity.translate(geom, 0, -top)
+    return t(outline), t(lines), t(mark)
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -662,11 +731,15 @@ LOGOS = {
     # name-tag style: tall letters (2 mm), ring on the left end, outline already in the crest (border 0)
     "lorenzo_tag": dict(name="Lorenzo tag", crest=crest_lorenzo_tag, base="black", top="white", relief_t=2.0,
                         colors=("#0d0d0d", "#f2f2f2"), border=0, tab_side="left", tab_overlap=2.5),
+    # 3 colors: white base, black lines and red mark raised on top (multi-color unit for the top layers)
+    "kratos": dict(name="Kratos", crest=crest_kratos, base="white", top="black", extra="red", relief_t=1.0,
+                   colors=("#ededed", "#1c1c1c", "#b3202c"), border=0),
 }
 
 
 def build_2d(logo):
-    shield, white = logo["crest"]()
+    """-> base, top[, extra]. A crest may return a third shape: a second relief color (logo["extra"])."""
+    shield, white, *extra = logo["crest"]()
     outline = shield.buffer(logo.get("border", BORDER), join_style="round")
     x0, y0, x1, y1 = outline.bounds
     if logo.get("tab_side") == "left":
@@ -678,10 +751,15 @@ def build_2d(logo):
     tab = Point(*tab_c).buffer(TAB_R, 128)
     hole = Point(*tab_c).buffer(HOLE_R, 128)
     base = unary_union([outline, tab]).difference(hole)
-    white = white.intersection(shield)
-    white = white.buffer(0.02).buffer(-0.02)  # fuse point contacts so the mesh stays manifold
-    white = unary_union([p for p in getattr(white, "geoms", [white]) if p.area > 0.02])  # drop specks
-    return base, white
+    def clean_part(g):
+        g = g.intersection(shield)
+        g = g.buffer(0.02).buffer(-0.02)  # fuse point contacts so the mesh stays manifold
+        return unary_union([p for p in getattr(g, "geoms", [g]) if p.area > 0.02])  # drop specks
+
+    if extra:
+        extra = clean_part(extra[0])
+        return base, clean_part(white.difference(extra)), extra
+    return base, clean_part(white)
 
 
 def extrude(g, h, z0):
@@ -741,13 +819,13 @@ def write_3mf(path, title, parts):
             z.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), data, zipfile.ZIP_DEFLATED)
 
 
-def preview(base, white, path, logo, thickness):
+def preview(base, white, path, logo, thickness, extra=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     bg = "#20242a"
-    base_c, top_c = logo["colors"]
+    base_c, top_c = logo["colors"][:2]
 
     from matplotlib.patches import PathPatch
     from matplotlib.path import Path as MPath
@@ -765,6 +843,8 @@ def preview(base, white, path, logo, thickness):
     ax.set_facecolor(bg)
     draw(ax, base, base_c)
     draw(ax, white, top_c)
+    if extra is not None:
+        draw(ax, extra, logo["colors"][2])
     for p in getattr(base, "geoms", [base]):
         ax.plot(*p.exterior.xy, color="#555", lw=0.6)
         for i in p.interiors:
@@ -779,7 +859,7 @@ def preview(base, white, path, logo, thickness):
 
 def make(key):
     logo = LOGOS[key]
-    base2d, white2d = build_2d(logo)
+    base2d, white2d, *extra2d = build_2d(logo)
     relief_t = logo["relief_t"]
     base_t = logo.get("base_t", BASE_T)
     base = extrude(base2d, base_t, 0)
@@ -788,8 +868,12 @@ def make(key):
     if flat:
         # black fills the top layer everywhere the white is not: one flat face, two colors in the same layers
         base = trimesh.boolean.union([base, extrude(base2d.difference(white2d), relief_t, base_t)], engine="manifold")
-    single = trimesh.boolean.union([base, white], engine="manifold")
-    assert base.is_volume and white.is_volume and single.is_volume
+    parts = [base, white]
+    if extra2d:
+        extra = extrude(extra2d[0], relief_t, base_t)
+        parts.append(extra)
+    single = trimesh.boolean.union(parts, engine="manifold")
+    assert all(p.is_volume for p in parts) and single.is_volume
     out = os.path.join(ROOT, "stl")
     os.makedirs(out, exist_ok=True)
     pre = os.path.join(out, f"{key}_keychain")
@@ -799,9 +883,14 @@ def make(key):
     white.export(f"{pre}_{top_name}.stl")
     if not flat:  # a flat keychain in one color would just be a plain disc
         single.export(f"{pre}_single_color.stl")
-    write_3mf(f"{pre}_2color.3mf", f"{logo['name']} keychain",
-              [(base_name, base, FILAMENT[logo["base"]]), (top_name, white, FILAMENT[logo["top"]])])
-    preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, base_t + relief_t)
+    parts_3mf = [(base_name, base, FILAMENT[logo["base"]]), (top_name, white, FILAMENT[logo["top"]])]
+    if extra2d:
+        extra_name = f"{logo['extra']}_relief"
+        extra.export(f"{pre}_{extra_name}.stl")
+        parts_3mf.append((extra_name, extra, FILAMENT[logo["extra"]]))
+    write_3mf(f"{pre}_{len(parts_3mf)}color.3mf", f"{logo['name']} keychain", parts_3mf)
+    preview(base2d, white2d, os.path.join(ROOT, "images", f"{key}_keychain_preview.png"), logo, base_t + relief_t,
+            extra2d[0] if extra2d else None)
     for n, m in [("base", base), ("white", white), ("single", single)]:
         print(key, n, "watertight", m.is_watertight, "extents", np.round(m.extents, 2), "volume", round(m.volume, 1))
 
