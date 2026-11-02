@@ -14,6 +14,7 @@ Colored base (shield + outline + key-ring tab) with the crest's details raised o
   mafia  gangster bust in a fedora, black + white (from a grey-on-black image) -> stl/mafia_keychain_*
   flame  red flame devil, black cut-out base + red relief -> stl/flame_keychain_*
   lorenzo  Lorenzo logo with dragon, black disc + white relief -> stl/lorenzo_keychain_*
+  lorenzo_tag  the same logo as a name tag: base follows the letters, ring on the left, tall white letters
 Each writes <prefix>_<base>_base.stl, <prefix>_<top>_relief.stl, <prefix>_single_color.stl,
 <prefix>_2color.3mf and images/<prefix>_preview.png.
 """
@@ -555,12 +556,10 @@ def crest_sleep():
     return affinity.translate(shield, 0, -top), affinity.translate(white, 0, -top)
 
 
-def light_on_disc(fn, threshold=100, fill=0.9):
-    """Light artwork on a dark image -> raised white on a black disc.
+def light_art(fn, size_px_mm, threshold=100):
+    """Light artwork on a dark image -> shapely geometry in mm, centered on its smallest enclosing circle.
 
-    The artwork is centered on its smallest enclosing circle and scaled to `fill` of the disc, so a margin of
-    black stays around it. Specks under 0.45 x 0.45 mm are dropped and lines/gaps under the nozzle width are
-    widened.
+    size_px_mm(r_px, bbox_w_px) gives the mm per (4x upsampled) pixel. Specks under 0.45 x 0.45 mm are dropped.
     """
     import cv2
     from PIL import Image
@@ -570,10 +569,19 @@ def light_on_disc(fn, threshold=100, fill=0.9):
     light = cv2.resize(g, None, fx=F, fy=F, interpolation=cv2.INTER_CUBIC) > threshold
     ys, xs = np.nonzero(light)
     (cx, cy), r_px = cv2.minEnclosingCircle(np.c_[xs, ys].astype(np.float32))
-    px_mm = fill * SHIELD_H / 2 / r_px
+    px_mm = size_px_mm(r_px, xs.max() - xs.min() + 1)
     lab, n = ndi.label(light)
     light = np.r_[False, ndi.sum(light, lab, range(1, n + 1)) >= (0.45 / px_mm) ** 2][lab]
-    art = affinity.translate(mask_to_shapes(light, px_mm), -cx * px_mm, cy * px_mm)
+    return affinity.translate(mask_to_shapes(light, px_mm), -cx * px_mm, cy * px_mm)
+
+
+def light_on_disc(fn, threshold=100, fill=0.9):
+    """Light artwork on a dark image -> raised white on a black disc.
+
+    The artwork is centered on its smallest enclosing circle and scaled to `fill` of the disc, so a margin of
+    black stays around it. Lines/gaps under the nozzle width are widened.
+    """
+    art = light_art(fn, lambda r_px, w_px: fill * SHIELD_H / 2 / r_px, threshold)
     disk = Point(0, 0).buffer(SHIELD_H / 2, 256)
     black = thicken(disk.difference(art), MIN_STROKE / 2)
     white = thicken(disk.difference(black), 0.17).intersection(disk)
@@ -615,6 +623,15 @@ def crest_flame():
     return shield, white
 
 
+def crest_lorenzo_tag():
+    """Lorenzo as a name tag: logo 60 mm wide, base = the letters' outline grown 3 mm and rounded."""
+    art = light_art("lorenzo_reference.jpg", lambda r_px, w_px: 60.0 / w_px)
+    shield = art.buffer(3.0).buffer(1.5).buffer(-1.5)       # rounded outline, small gaps filled
+    black = thicken(shield.difference(art), MIN_STROKE / 2)
+    white = thicken(shield.difference(black), 0.17).intersection(shield)
+    return shield, white
+
+
 LOGOS = {
     "css": dict(name="CS Sfaxien", crest=crest_css, base="black", top="white", relief_t=0.8,
                 colors=("#0d0d0d", "#f2f2f2")),
@@ -642,16 +659,24 @@ LOGOS = {
                   colors=("#0d0d0d", "#c8101a"), border=1.5, tab_overlap=3.5),
     "lorenzo": dict(name="Lorenzo", crest=crest_lorenzo, base="black", top="white", relief_t=1.0,
                     colors=("#0d0d0d", "#f2f2f2")),
+    # name-tag style: tall letters (2 mm), ring on the left end, outline already in the crest (border 0)
+    "lorenzo_tag": dict(name="Lorenzo tag", crest=crest_lorenzo_tag, base="black", top="white", relief_t=2.0,
+                        colors=("#0d0d0d", "#f2f2f2"), border=0, tab_side="left", tab_overlap=2.5),
 }
 
 
 def build_2d(logo):
     shield, white = logo["crest"]()
     outline = shield.buffer(logo.get("border", BORDER), join_style="round")
-    top = outline.bounds[3]
-    tab_y = top + TAB_R - logo.get("tab_overlap", 1.5)
-    tab = Point(0, tab_y).buffer(TAB_R, 128)
-    hole = Point(0, tab_y).buffer(HOLE_R, 128)
+    x0, y0, x1, y1 = outline.bounds
+    if logo.get("tab_side") == "left":
+        # ring on the left end, at the height of the outline's left edge
+        left_edge = outline.intersection(box(x0, y0, x0 + 1.0, y1))
+        tab_c = (x0 - TAB_R + logo.get("tab_overlap", 1.5), left_edge.centroid.y)
+    else:
+        tab_c = (0, y1 + TAB_R - logo.get("tab_overlap", 1.5))
+    tab = Point(*tab_c).buffer(TAB_R, 128)
+    hole = Point(*tab_c).buffer(HOLE_R, 128)
     base = unary_union([outline, tab]).difference(hole)
     white = white.intersection(shield)
     white = white.buffer(0.02).buffer(-0.02)  # fuse point contacts so the mesh stays manifold
