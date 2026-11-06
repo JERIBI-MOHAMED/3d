@@ -194,3 +194,4 @@ The logo's light parts are the plastic: both text banners with the letters cut o
 Turn on **Elephant foot compensation** (0.1-0.15) so the dovetails slide in.
 **Assemble:** lay all tiles face down on a flat floor. Push the frame dovetails together, then put a drop of CA glue on every cut face (frame and logo) and press 30 s.
 Hang it from the top frame bar with 2 nails or picture hooks, or use mounting strips on the back of the frame.
+- **Redwood Original version** (`--image wallart/soa_redwood_reference.jpg --name wallart_soa_redwood`): traced from a clean white-on-black picture with the smooth sub-pixel tracer. Same frame and joints, **50 x 54 cm**, **9 tiles** (`stl/wallart_soa_redwood_rRcC.stl`, at most 210 x 190 mm), about 444 cm³ (~400-450 g). It includes the anarchy-symbol ball and the hand.
