@@ -1,6 +1,9 @@
 """Black cut-out wall art (no backlight), printed in tiles on a small bed.
 
 python3 wallart/make_wallart.py        (same dependencies as keychain/make_keychain.py)
+python3 wallart/make_wallart.py --from-3mf sign.3mf --part "SOA Redwood OG" --out DIR
+    takes the logo from a part of a 3MF you have (sliced at mid-height; mirrored back when the part sits at
+    the bottom of the model, i.e. a sign printed face down) and writes the tiles and previews into DIR.
 
 Sons of Anarchy panel, 50 cm wide x 100 cm tall: a black frame with the logo cut out. The logo's light parts
 (the two text banners and the reaper) are the plastic; its black background is open, so the wall shows
@@ -41,8 +44,51 @@ DOVE = 10.0               # dovetail size on the frame joints
 CLEAR = 0.15              # dovetail clearance per side
 
 
+SOURCE = None             # (3mf path, part name) to take the logo from, set by --from-3mf / --part
+OUT = None                # output directory (default: stl/ and images/ of the repository)
+
+
+def logo_from_3mf(path, part):
+    """The named part of a Bambu/Orca 3MF -> 2D outline (slice at mid-height), mirrored back if face-down."""
+    import re
+    import zipfile
+    import trimesh
+    z = zipfile.ZipFile(path)
+    cfg = z.read("Metadata/model_settings.config").decode()
+    ids = re.findall(r'<part id="(\d+)"[^>]*>\s*<metadata key="name" value="([^"]+)"', cfg)
+    pid = next(i for i, n in ids if n == part)
+    main = z.read("3D/3dmodel.model").decode()
+    comps = dict(re.findall(r'<component [^>]*objectid="(\d+)"[^>]*transform="([^"]+)"', main))
+    meshes = {}
+    for name in z.namelist():
+        if name.startswith("3D/Objects/") and name.endswith(".model"):
+            src = z.read(name).decode()
+            for oid, body in re.findall(r'<object id="(\d+)"[^>]*>(.*?)</object>', src, re.S):
+                v = np.array(re.findall(r'<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"', body), float)
+                fc = np.array(re.findall(r'<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"', body), int)
+                if oid in comps:
+                    M = np.array(comps[oid].split(), float).reshape(4, 3)
+                    v = v @ M[:3] + M[3]
+                meshes[oid] = trimesh.Trimesh(v, fc, process=False)
+    m = meshes[pid]
+    zmid = m.bounds[:, 2].mean()
+    planar, _ = m.section(plane_origin=[0, 0, zmid], plane_normal=[0, 0, 1]).to_2D(to_2D=np.eye(4), check=False)
+    g = unary_union(planar.polygons_full)
+    zmin_all = min(mm.bounds[0, 2] for mm in meshes.values())
+    if m.bounds[0, 2] - zmin_all < 0.5:                      # at the bottom: the sign prints face down
+        g = affinity.scale(g, -1, 1, origin=(0, 0))
+    return g
+
+
 def logo_shapes():
     """Light parts of the logo -> shapely geometry in mm, centered at (0, 0), LOGO_W wide."""
+    if SOURCE:
+        art = logo_from_3mf(*SOURCE)
+        x0, y0, x1, y1 = art.bounds
+        k = LOGO_W / (x1 - x0)
+        art = affinity.scale(art, k, k, origin=((x0 + x1) / 2, (y0 + y1) / 2))
+        x0, y0, x1, y1 = art.bounds
+        return affinity.translate(art, -(x0 + x1) / 2, -(y0 + y1) / 2)
     from PIL import Image
     g = np.array(Image.open(os.path.join(HERE, "soa_reference.jpg")).convert("L")).astype(np.float32)
     light = g > 110
@@ -193,7 +239,9 @@ def main():
     frame, art, bars = design()
     logo = unary_union([art, bars]).difference(frame)
     tl, xs, ys = tiles(frame, logo)
-    os.makedirs(os.path.join(ROOT, "stl"), exist_ok=True)
+    stl_dir = OUT or os.path.join(ROOT, "stl")
+    img_dir = OUT or os.path.join(ROOT, "images")
+    os.makedirs(stl_dir, exist_ok=True)
     total, info = 0.0, []
     for (r, c), (f, lg) in sorted(tl.items()):
         meshes = [kc.extrude(f, T_FRAME, 0)] if not f.is_empty else []
@@ -202,7 +250,7 @@ def main():
         m = trimesh.boolean.union(meshes, engine="manifold") if len(meshes) > 1 else meshes[0]
         assert m.is_volume, (r, c)
         name = f"wallart_soa_r{ROWS - r}c{c + 1}.stl"          # row 1 = top
-        m.export(os.path.join(ROOT, "stl", name))
+        m.export(os.path.join(stl_dir, name))
         total += m.volume
         info.append((name, np.round(m.extents[:2], 1).tolist(), round(m.volume / 1000, 1)))
     print("column cuts at x =", np.round(xs[1:-1], 1).tolist(), "(logo crossed: %.0f mm)" % sum(
@@ -232,8 +280,17 @@ def main():
         ax.axis("off")
         title = "tiles (row 1 = top)" if show_tiles else f"Sons of Anarchy wall art  {W / 10:.0f} x {(Y1 - Y0) / 10:.1f} cm"
         ax.set_title(title, color="w")
-        plt.savefig(os.path.join(ROOT, "images", fn), dpi=110, bbox_inches="tight", facecolor=fig.get_facecolor())
+        plt.savefig(os.path.join(img_dir, fn), dpi=110, bbox_inches="tight", facecolor=fig.get_facecolor())
 
 
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--from-3mf")
+    ap.add_argument("--part")
+    ap.add_argument("--out")
+    a = ap.parse_args()
+    if a.from_3mf:
+        SOURCE = (a.from_3mf, a.part)
+    OUT = a.out
     main()
