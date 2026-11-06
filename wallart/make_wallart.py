@@ -235,6 +235,66 @@ def tiles(frame, logo):
     return out, xs, ys
 
 
+BED = (220.0, 215.0)      # K2 SE bed, for the plate grid of the project file
+
+
+def pack_project(stl_paths, out, title):
+    """All tiles in one 3MF project: one tile per plate (r1c1 = plate 1), black filament.
+
+    Creality Print / OrcaSlicer lay plates in a grid (3 columns for 9 plates, 1.2 x bed apart) and read the
+    plate list from Metadata/model_settings.config, so each tile opens on its own plate, ready to slice.
+    """
+    import re
+    import zipfile
+    import trimesh
+    tiles = sorted(stl_paths, key=lambda p: [int(n) for n in re.findall(r"r(\d+)c(\d+)", p)[-1]])
+    n = len(tiles)
+    cols = int(np.ceil(np.sqrt(n)))
+    res, items, cfg, plates = [], [], [], []
+    for i, path in enumerate(tiles):
+        m = trimesh.load(path)
+        lo, hi = m.bounds
+        m.apply_translation([-(lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, -lo[2]])
+        name = os.path.splitext(os.path.basename(path))[0]
+        tag = re.findall(r"r\d+c\d+", name)[-1]
+        mesh_id, obj_id = 2 * i + 1, 2 * i + 2
+        v = "".join(f'<vertex x="{a:.4f}" y="{b:.4f}" z="{c:.4f}"/>' for a, b, c in m.vertices)
+        t = "".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in m.faces)
+        res.append(f'<object id="{mesh_id}" name="{tag}" type="model"><mesh><vertices>{v}</vertices>'
+                   f'<triangles>{t}</triangles></mesh></object>'
+                   f'<object id="{obj_id}" name="{tag}" type="model"><components><component objectid="{mesh_id}"/>'
+                   f'</components></object>')
+        row, col = divmod(i, cols)
+        x = col * BED[0] * 1.2 + BED[0] / 2
+        y = -row * BED[1] * 1.2 + BED[1] / 2
+        items.append(f'<item objectid="{obj_id}" transform="1 0 0 0 1 0 0 0 1 {x:.3f} {y:.3f} 0"/>')
+        cfg.append(f' <object id="{obj_id}">\n  <metadata key="name" value="{tag}"/>\n'
+                   f'  <metadata key="extruder" value="1"/>\n'
+                   f'  <part id="{mesh_id}" subtype="normal_part">\n   <metadata key="name" value="{name}"/>\n'
+                   f'   <metadata key="extruder" value="1"/>\n  </part>\n </object>\n')
+        plates.append(f' <plate>\n  <metadata key="plater_id" value="{i + 1}"/>\n'
+                      f'  <metadata key="plater_name" value="{tag}"/>\n  <metadata key="locked" value="false"/>\n'
+                      f'  <model_instance>\n   <metadata key="object_id" value="{obj_id}"/>\n'
+                      f'   <metadata key="instance_id" value="0"/>\n   <metadata key="identify_id" value="{100 + i}"/>\n'
+                      f'  </model_instance>\n </plate>\n')
+    model = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+             '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+             f'<metadata name="Title">{title}</metadata><resources>' + "".join(res) + '</resources><build>'
+             + "".join(items) + '</build></model>')
+    settings = '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n' + "".join(cfg) + "".join(plates) + '</config>\n'
+    ct = ('<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+          '<Default Extension="config" ContentType="text/xml"/></Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, data in [("[Content_Types].xml", ct), ("_rels/.rels", rels), ("3D/3dmodel.model", model),
+                           ("Metadata/model_settings.config", settings)]:
+            z.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), data, zipfile.ZIP_DEFLATED)
+    return n
+
+
 def draw(ax, g, color):
     from matplotlib.patches import PathPatch
     from matplotlib.path import Path as MPath
@@ -274,6 +334,10 @@ def main():
         logo.intersection(LineString([(x, Y0), (x, Y1)])).length for x in xs[1:-1]))
     for i in info:
         print(*i)
+    import glob
+    proj = os.path.join(stl_dir, f"{NAME}_project.3mf")
+    pack_project(glob.glob(os.path.join(stl_dir, f"{NAME}_r*c*.stl")), proj, f"{NAME} wall art")
+    print("project file", proj)
     print("total volume %.0f cm3 -> about %.0f g PLA at ~75 %% fill (4-5 mm parts are mostly walls)" % (total / 1000, total / 1000 * 1.24 * 0.75))
     # previews: the panel on a light wall, and the tile layout
     for fn, show_tiles in ((f"{NAME}_preview.png", False), (f"{NAME}_tiles.png", True)):
@@ -308,8 +372,15 @@ if __name__ == "__main__":
     ap.add_argument("--out")
     ap.add_argument("--image")
     ap.add_argument("--name", default=NAME)
+    ap.add_argument("--pack-only", action="store_true", help="only build NAME_project.3mf from the existing tiles")
     a = ap.parse_args()
     IMAGE, NAME = a.image, a.name
+    if a.pack_only:
+        import glob
+        d = a.out or os.path.join(ROOT, "stl")
+        out = os.path.join(d, f"{NAME}_project.3mf")
+        print(pack_project(glob.glob(os.path.join(d, f"{NAME}_r*c*.stl")), out, f"{NAME} wall art"), "tiles ->", out)
+        sys.exit(0)
     if a.from_3mf:
         SOURCE = (a.from_3mf, a.part)
     OUT = a.out
