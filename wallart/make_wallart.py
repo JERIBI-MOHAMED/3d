@@ -23,7 +23,9 @@ sys.path.insert(0, os.path.join(ROOT, "keychain"))
 import make_keychain as kc  # noqa: E402  (mask_to_shapes, thicken, extrude)
 
 # --- parameters (mm) ---
-W, H = 500.0, 1000.0      # panel: 50 cm wide x 100 cm tall
+W, H = 500.0, 1000.0      # panel: 50 cm wide x up to 100 cm tall (the bottom stays at -H/2)
+TOP_GAP = 15.0            # space between the top of the logo and the top frame bar (None: full height H)
+Y0, Y1 = -H / 2, H / 2    # panel bottom / top, set by design()
 FRAME = 25.0              # frame border width
 LOGO_W = 440.0            # logo width inside the frame
 T_FRAME = 5.0             # frame thickness
@@ -32,7 +34,8 @@ MIN_PLASTIC = 3.0         # thinnest plastic line (sturdy at this size)
 MIN_HOLE = 2.0            # thinnest opening
 MIN_ISLAND = 50.0         # plastic pieces smaller than this (mm2) are dropped instead of bridged
 BRIDGE = 4.0              # bridge width
-COLS, ROWS = 3, 5         # tiles: 200 mm tall rows; column cuts placed to cross the least logo (<= 200 mm wide)
+COLS, ROWS = 3, 5         # tiles; ROWS is recomputed by design(): rows <= MAX_ROW tall. Column cuts cross the least logo
+MAX_ROW = 205.0           # tallest row (+ the 10 mm dovetail = 215 mm, the K2 SE bed depth)
 DOVE = 10.0               # dovetail size on the frame joints
 CLEAR = 0.15              # dovetail clearance per side
 
@@ -100,9 +103,13 @@ def connect(frame, art):
 
 
 def design():
-    outer = box(-W / 2, -H / 2, W / 2, H / 2)
-    frame = outer.difference(box(-W / 2 + FRAME, -H / 2 + FRAME, W / 2 - FRAME, H / 2 - FRAME))
+    global Y1, ROWS
     art = clean(logo_shapes())
+    if TOP_GAP is not None:
+        Y1 = min(H / 2, art.bounds[3] + TOP_GAP + FRAME)     # top frame bar right above the logo
+    ROWS = int(np.ceil((Y1 - Y0) / MAX_ROW))
+    outer = box(-W / 2, Y0, W / 2, Y1)
+    frame = outer.difference(box(-W / 2 + FRAME, Y0 + FRAME, W / 2 - FRAME, Y1 - FRAME))
     bars = connect(frame, art)
     return frame, art, bars
 
@@ -120,7 +127,7 @@ def dovetail(c, d, normal):
 def column_cuts(logo, max_w=200.0):
     """The two vertical cuts (3 columns, each <= max_w wide) that cross the least logo."""
     def crossed(x):
-        return logo.intersection(LineString([(x, -H / 2), (x, H / 2)])).length
+        return logo.intersection(LineString([(x, Y0), (x, Y1)])).length
     cand = np.arange(-W / 2 + W - 2 * max_w, -W / 2 + max_w + 0.1, 2.0)   # first cut range
     prof = {round(x, 1): crossed(x) for x in np.arange(-W / 2 + 50, W / 2 - 49, 2.0)}
     best = None
@@ -135,13 +142,13 @@ def column_cuts(logo, max_w=200.0):
 def tiles(frame, logo):
     """Split into COLS x ROWS tiles; dovetails on the frame at every cut. -> {(r, c): (frame_part, logo_part)}"""
     xs = np.array(column_cuts(logo))
-    ys = np.linspace(-H / 2, H / 2, ROWS + 1)
+    ys = np.linspace(Y0, Y1, ROWS + 1)
     tabs = {}  # (r, c) -> list of tab polygons owned by that tile
     for r in range(ROWS):
         for c in range(COLS):
             tabs[(r, c)] = []
     for c in range(1, COLS):          # vertical cuts: tabs in the top and bottom frame bands, left tile -> right
-        for yc in (H / 2 - FRAME / 2, -H / 2 + FRAME / 2):
+        for yc in (Y1 - FRAME / 2, Y0 + FRAME / 2):
             r = ROWS - 1 if yc > 0 else 0
             tabs[(r, c - 1)].append(dovetail((xs[c], yc), DOVE, (1, 0)))
     for r in range(1, ROWS):          # horizontal cuts: tabs in the left and right frame bands, lower tile -> upper
@@ -196,7 +203,7 @@ def main():
         total += m.volume
         info.append((name, np.round(m.extents[:2], 1).tolist(), round(m.volume / 1000, 1)))
     print("column cuts at x =", np.round(xs[1:-1], 1).tolist(), "(logo crossed: %.0f mm)" % sum(
-        logo.intersection(LineString([(x, -H / 2), (x, H / 2)])).length for x in xs[1:-1]))
+        logo.intersection(LineString([(x, Y0), (x, Y1)])).length for x in xs[1:-1]))
     for i in info:
         print(*i)
     print("total volume %.0f cm3 -> about %.0f g PLA at ~75 %% fill (4-5 mm parts are mostly walls)" % (total / 1000, total / 1000 * 1.24 * 0.75))
@@ -204,12 +211,12 @@ def main():
     for fn, show_tiles in (("wallart_soa_preview.png", False), ("wallart_soa_tiles.png", True)):
         fig, ax = plt.subplots(figsize=(6, 11))
         fig.patch.set_facecolor("#20242a")
-        draw(ax, box(-W / 2, -H / 2, W / 2, H / 2), "#d9d4ca")          # the wall behind the panel
+        draw(ax, box(-W / 2, Y0, W / 2, Y1), "#d9d4ca")          # the wall behind the panel
         draw(ax, frame, "#111")
         draw(ax, logo, "#111")
         if show_tiles:
             for x in xs[1:-1]:
-                ax.plot([x, x], [-H / 2, H / 2], color="#e33", lw=0.8)
+                ax.plot([x, x], [Y0, Y1], color="#e33", lw=0.8)
             for y in ys[1:-1]:
                 ax.plot([-W / 2, W / 2], [y, y], color="#e33", lw=0.8)
             for r in range(ROWS):
@@ -217,10 +224,10 @@ def main():
                     ax.text((xs[c] + xs[c + 1]) / 2, (ys[r] + ys[r + 1]) / 2, f"r{ROWS - r}c{c + 1}",
                             color="#e33", ha="center", va="center", fontsize=9)
         ax.set_xlim(-W / 2 - 10, W / 2 + 10)
-        ax.set_ylim(-H / 2 - 10, H / 2 + 10)
+        ax.set_ylim(Y0 - 10, Y1 + 10)
         ax.set_aspect("equal")
         ax.axis("off")
-        title = "tiles (row 1 = top)" if show_tiles else f"Sons of Anarchy wall art  {W / 10:.0f} x {H / 10:.0f} cm"
+        title = "tiles (row 1 = top)" if show_tiles else f"Sons of Anarchy wall art  {W / 10:.0f} x {(Y1 - Y0) / 10:.1f} cm"
         ax.set_title(title, color="w")
         plt.savefig(os.path.join(ROOT, "images", fn), dpi=110, bbox_inches="tight", facecolor=fig.get_facecolor())
 
