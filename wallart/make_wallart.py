@@ -4,6 +4,9 @@ python3 wallart/make_wallart.py        (same dependencies as keychain/make_keych
 python3 wallart/make_wallart.py --from-3mf sign.3mf --part "SOA Redwood OG" --out DIR
     takes the logo from a part of a 3MF you have (sliced at mid-height; mirrored back when the part sits at
     the bottom of the model, i.e. a sign printed face down) and writes the tiles and previews into DIR.
+python3 wallart/make_wallart.py --image logo.jpg --name wallart_soa_redwood
+    traces a light logo on a dark background (smooth sub-pixel outlines, svg/raster_to_svg.py) and names the
+    files NAME_rRcC.stl, NAME_preview.png, NAME_tiles.png.
 
 Sons of Anarchy panel, 50 cm wide x 100 cm tall: a black frame with the logo cut out. The logo's light parts
 (the two text banners and the reaper) are the plastic; its black background is open, so the wall shows
@@ -45,6 +48,8 @@ CLEAR = 0.15              # dovetail clearance per side
 
 
 SOURCE = None             # (3mf path, part name) to take the logo from, set by --from-3mf / --part
+IMAGE = None              # light-on-dark logo image to trace instead, set by --image
+NAME = "wallart_soa"      # output file prefix, set by --name
 OUT = None                # output directory (default: stl/ and images/ of the repository)
 
 
@@ -84,6 +89,18 @@ def logo_shapes():
     """Light parts of the logo -> shapely geometry in mm, centered at (0, 0), LOGO_W wide."""
     if SOURCE:
         art = logo_from_3mf(*SOURCE)
+        x0, y0, x1, y1 = art.bounds
+        k = LOGO_W / (x1 - x0)
+        art = affinity.scale(art, k, k, origin=((x0 + x1) / 2, (y0 + y1) / 2))
+        x0, y0, x1, y1 = art.bounds
+        return affinity.translate(art, -(x0 + x1) / 2, -(y0 + y1) / 2)
+    if IMAGE:
+        sys.path.insert(0, os.path.join(ROOT, "svg"))
+        import raster_to_svg
+        rings, _ = raster_to_svg.trace(IMAGE, threshold=128, invert=True)
+        art = Polygon()
+        for p in sorted((Polygon(np.c_[r[:, 0], -r[:, 1]]).buffer(0) for r in rings), key=lambda p: -p.area):
+            art = art.symmetric_difference(p)                  # even-odd nesting; image y points down
         x0, y0, x1, y1 = art.bounds
         k = LOGO_W / (x1 - x0)
         art = affinity.scale(art, k, k, origin=((x0 + x1) / 2, (y0 + y1) / 2))
@@ -249,7 +266,7 @@ def main():
             meshes.append(kc.extrude(lg, T_ART, 0))
         m = trimesh.boolean.union(meshes, engine="manifold") if len(meshes) > 1 else meshes[0]
         assert m.is_volume, (r, c)
-        name = f"wallart_soa_r{ROWS - r}c{c + 1}.stl"          # row 1 = top
+        name = f"{NAME}_r{ROWS - r}c{c + 1}.stl"          # row 1 = top
         m.export(os.path.join(stl_dir, name))
         total += m.volume
         info.append((name, np.round(m.extents[:2], 1).tolist(), round(m.volume / 1000, 1)))
@@ -259,7 +276,7 @@ def main():
         print(*i)
     print("total volume %.0f cm3 -> about %.0f g PLA at ~75 %% fill (4-5 mm parts are mostly walls)" % (total / 1000, total / 1000 * 1.24 * 0.75))
     # previews: the panel on a light wall, and the tile layout
-    for fn, show_tiles in (("wallart_soa_preview.png", False), ("wallart_soa_tiles.png", True)):
+    for fn, show_tiles in ((f"{NAME}_preview.png", False), (f"{NAME}_tiles.png", True)):
         fig, ax = plt.subplots(figsize=(6, 11))
         fig.patch.set_facecolor("#20242a")
         draw(ax, box(-W / 2, Y0, W / 2, Y1), "#d9d4ca")          # the wall behind the panel
@@ -289,7 +306,10 @@ if __name__ == "__main__":
     ap.add_argument("--from-3mf")
     ap.add_argument("--part")
     ap.add_argument("--out")
+    ap.add_argument("--image")
+    ap.add_argument("--name", default=NAME)
     a = ap.parse_args()
+    IMAGE, NAME = a.image, a.name
     if a.from_3mf:
         SOURCE = (a.from_3mf, a.part)
     OUT = a.out
