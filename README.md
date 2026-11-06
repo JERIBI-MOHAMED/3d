@@ -182,13 +182,13 @@ It traces the image's anti-aliased edges 4x upsampled, with sub-pixel accuracy, 
 
 # Wall art: Sons of Anarchy panel (`wallart/make_wallart.py`)
 
-Black cut-out wall panel, **50 cm wide x 80.6 cm tall**, no backlight. The top frame bar sits 15 mm above the logo (`TOP_GAP`; set it to `None` for the full 100 cm). The black frame (25 mm wide, 5 mm thick) holds the logo, 44 x 53 cm and 4 mm thick.
+Black cut-out wall panel, **50 cm wide x 61.1 cm tall**, no backlight. The top and bottom frame bars sit 15 mm from the logo (`TOP_GAP`, `BOTTOM_GAP`; set them to `None` for the full 100 cm). The black frame (25 mm wide, 5 mm thick) holds the logo, 44 x 53 cm and 4 mm thick.
 The logo's light parts are the plastic: both text banners with the letters cut out, and the reaper. The background is open, so the wall shows through.
 - Every piece is bridged to the frame (4 mm bridges), and the big pieces get two bridges each, so the panel is one part.
 - Plastic is at least 3 mm wide and holes at least 2 mm. Pieces under 50 mm² (the image's speckles) are dropped.
-- It's split into **12 tiles (3 columns x 4 rows)**, each at most 210 x 211.4 mm, so each fits the K2 SE bed (rows are at most 205 mm plus the dovetail). The column cuts are placed where they cross the least logo.
+- It's split into **9 tiles (3 x 3)**, each at most 210 x 213.7 mm, so each fits the K2 SE bed (rows are at most 205 mm plus the dovetail). The column cuts are placed where they cross the least logo.
 - The frame has dovetails at every cut (0.15 mm clearance). Logo parts that are cut get glued.
-- Files: `stl/wallart_soa_rRcC.stl` (row 1 = top), plus `images/wallart_soa_preview.png` and `images/wallart_soa_tiles.png`. Total about 567 cm³, roughly 500-550 g of PLA.
+- Files: `stl/wallart_soa_rRcC.stl` (row 1 = top), plus `images/wallart_soa_preview.png` and `images/wallart_soa_tiles.png`. Total about 519 cm³, roughly 450-500 g of PLA.
 
 **Print (K2 SE, black PLA, 0.4 nozzle):** one tile per plate, flat as exported, 0.20 mm Standard, 3 walls, 15 % infill, no supports.
 Turn on **Elephant foot compensation** (0.1-0.15) so the dovetails slide in.

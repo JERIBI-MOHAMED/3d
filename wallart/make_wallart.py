@@ -23,8 +23,9 @@ sys.path.insert(0, os.path.join(ROOT, "keychain"))
 import make_keychain as kc  # noqa: E402  (mask_to_shapes, thicken, extrude)
 
 # --- parameters (mm) ---
-W, H = 500.0, 1000.0      # panel: 50 cm wide x up to 100 cm tall (the bottom stays at -H/2)
+W, H = 500.0, 1000.0      # panel: 50 cm wide x up to 100 cm tall
 TOP_GAP = 15.0            # space between the top of the logo and the top frame bar (None: full height H)
+BOTTOM_GAP = 15.0         # space between the bottom of the logo and the bottom frame bar (None: full height H)
 Y0, Y1 = -H / 2, H / 2    # panel bottom / top, set by design()
 FRAME = 25.0              # frame border width
 LOGO_W = 440.0            # logo width inside the frame
@@ -103,10 +104,12 @@ def connect(frame, art):
 
 
 def design():
-    global Y1, ROWS
+    global Y0, Y1, ROWS
     art = clean(logo_shapes())
     if TOP_GAP is not None:
         Y1 = min(H / 2, art.bounds[3] + TOP_GAP + FRAME)     # top frame bar right above the logo
+    if BOTTOM_GAP is not None:
+        Y0 = max(-H / 2, art.bounds[1] - BOTTOM_GAP - FRAME)  # bottom frame bar right below it
     ROWS = int(np.ceil((Y1 - Y0) / MAX_ROW))
     outer = box(-W / 2, Y0, W / 2, Y1)
     frame = outer.difference(box(-W / 2 + FRAME, Y0 + FRAME, W / 2 - FRAME, Y1 - FRAME))
