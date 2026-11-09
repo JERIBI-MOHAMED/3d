@@ -196,3 +196,9 @@ Turn on **Elephant foot compensation** (0.1-0.15) so the dovetails slide in.
 Hang it from the top frame bar with 2 nails or picture hooks, or use mounting strips on the back of the frame.
 - **Redwood Original version** (`--image wallart/soa_redwood_reference.jpg --name wallart_soa_redwood`): traced from a clean white-on-black picture with the smooth sub-pixel tracer. Same frame and joints, **50 x 54 cm**, **9 tiles** (`stl/wallart_soa_redwood_rRcC.stl`, at most 210 x 190 mm), about 444 cm³ (~400-450 g). It includes the anarchy-symbol ball and the hand.
 - **One project file:** `stl/wallart_soa_redwood_project.3mf` holds all 9 tiles, one per plate, with the plates named r1c1 ... r3c3, in black (filament 1). Rebuild it from existing tiles with `python3 wallart/make_wallart.py --name wallart_soa_redwood --pack-only`. A full run makes it automatically.
+
+# Pet statue base (`statue/make_base.py`)
+
+Round black display base like a collectible figure stand: Ø120 x 15 mm, with a rounded edge, a raised top step and a small bottom chamfer.
+`python3 statue/make_base.py [diameter]` -> `stl/statue_base.stl`. The pet itself comes from an image-to-3D tool (Creality Print "AI Creation", Meshy, Tripo3D), then it's placed on the step and joined to the base.
+Print in black PLA, 0.20 mm, 3 walls, 15 % infill, no supports.
