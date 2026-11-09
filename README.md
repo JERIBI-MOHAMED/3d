@@ -202,3 +202,10 @@ Hang it from the top frame bar with 2 nails or picture hooks, or use mounting st
 Round black display base like a collectible figure stand: Ø120 x 15 mm, with a rounded edge, a raised top step and a small bottom chamfer.
 `python3 statue/make_base.py [diameter]` -> `stl/statue_base.stl`. The pet itself comes from an image-to-3D tool (Creality Print "AI Creation", Meshy, Tripo3D), then it's placed on the step and joined to the base.
 Print in black PLA, 0.20 mm, 3 walls, 15 % infill, no supports.
+
+## Stylized dog statue (`statue/make_dog.py`)
+
+A smooth, toy-like figure of a standing dog, modeled on the owner's photos: fluffy chest, floppy ears, the big tail curled over the back. It's built from about 20 blended shapes and meshed with marching cubes. It isn't a photo-real sculpture; for that, use an image-to-3D tool and put the result on the same base.
+- `stl/statue_dog_on_base.3mf`: black base (filament 2) + dog (filament 1: load golden or beige PLA). The base is Ø150 mm and the statue 150 x 150 x 116 mm. The dog is 121 x 42 x 102 mm, with its paws 0.6 mm into the base.
+- `stl/statue_dog_on_base.stl` (one piece) and `stl/statue_dog.stl` (the dog alone) are also included.
+- **Print:** upright, 0.16-0.20 mm layers, 3 walls, 15 % infill, **tree supports** (the belly, chin, ears and tail overhang). With the CFS, the color changes once, where the paws meet the base.
