@@ -209,3 +209,12 @@ A smooth, toy-like figure of a standing dog, modeled on the owner's photos: fluf
 - `stl/statue_dog_on_base.3mf`: black base (filament 2) + dog (filament 1: load golden or beige PLA). The base is Ø150 mm and the statue 150 x 150 x 116 mm. The dog is 121 x 42 x 102 mm, with its paws 0.6 mm into the base.
 - `stl/statue_dog_on_base.stl` (one piece) and `stl/statue_dog.stl` (the dog alone) are also included.
 - **Print:** upright, 0.16-0.20 mm layers, 3 walls, 15 % infill, **tree supports** (the belly, chin, ears and tail overhang). With the CFS, the color changes once, where the paws meet the base.
+
+# Arabic calligraphy sign (`sign/make_sign.py`)
+
+White plaque, **160 x 85 x 5 mm**, with the text raised **1 mm in black**, like the AL-WARSHA DESIGNS print:
+**إبداعات** large on top, a rule, and **مودعي سجن المرناقية** below.
+The Arabic is shaped with HarfBuzz, so the letter forms join correctly, ligatures are used and it reads right to left. Strokes, dots and gaps are kept at 0.4 mm or more.
+- `python3 sign/make_sign.py ruqaa` uses **Aref Ruqaa Bold**, traditional Ruqʿah calligraphy (the default choice). `amiri` uses **Amiri Bold**, classic Naskh. Both are free (OFL, licences in `sign/fonts/`).
+- Files: `stl/sign_mornaguia_<font>.3mf`, preset with the white plate on filament 1 and the black text on filament 2. Separate STLs and a single-color STL are included too.
+- **Print:** flat, 0.20 mm. The color changes once, at **5.20 mm** (white up to 5.0 mm, black above). Without the CFS: single-color STL, pause at 5.20 mm.
