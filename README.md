@@ -218,3 +218,4 @@ The Arabic is shaped with HarfBuzz, so the letter forms join correctly, ligature
 - `python3 sign/make_sign.py ruqaa` uses **Aref Ruqaa Bold**, traditional Ruqʿah calligraphy (the default choice). `amiri` uses **Amiri Bold**, classic Naskh. Both are free (OFL, licences in `sign/fonts/`).
 - Files: `stl/sign_mornaguia_<font>.3mf`, preset with the white plate on filament 1 and the black text on filament 2. Separate STLs and a single-color STL are included too.
 - **Print:** flat, 0.20 mm. The color changes once, at **5.20 mm** (white up to 5.0 mm, black above). Without the CFS: single-color STL, pause at 5.20 mm.
+- **One line:** `python3 sign/make_sign.py ruqaa --line` puts the whole phrase on one line. The plaque fits the text: **160 x 40 mm** in Ruqaa, 160 x 38 mm in Amiri. Files are `stl/sign_mornaguia_<font>_line.3mf` (plus STLs), with the same colors and the same color change at 5.20 mm.

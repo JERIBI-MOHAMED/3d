@@ -1,7 +1,8 @@
 """Two-color sign: white plaque with raised black Arabic calligraphy (like the AL-WARSHA DESIGNS print).
 
-python3 sign/make_sign.py [font]      font: ruqaa (default, Aref Ruqaa Bold) or amiri (Amiri Bold, Naskh)
+python3 sign/make_sign.py [font] [--line]      font: ruqaa (Aref Ruqaa Bold) or amiri (Amiri Bold, Naskh)
 -> stl/sign_mornaguia_<font>.3mf (white plaque filament 1, black text filament 2), STLs and a preview.
+--line: the whole phrase on one line; the plaque height follows the text (files end in _line).
 
 Arabic is shaped with HarfBuzz (joined letter forms, ligatures, right-to-left), then the glyph outlines are
 turned into shapes. Layout: the title large on top, a rule, the second line below.
@@ -100,6 +101,18 @@ def fit(g, w, h):
     return affinity.translate(g, -(x0 + x1) / 2, -(y0 + y1) / 2)
 
 
+def design_line(font_key):
+    """The whole phrase on one line, plaque fitted around it with even margins."""
+    global H
+    font = os.path.join(HERE, "fonts", FONTS[font_key])
+    text = fit(shape_text(TITLE + " " + SUBTITLE, font), W - 2 * MARGIN, 60.0)
+    H = round((text.bounds[3] - text.bounds[1]) + 2 * MARGIN)
+    text = kc.thicken(text, kc.MIN_STROKE / 2)
+    plate = box(-W / 2, -H / 2, W / 2, H / 2)
+    gaps = kc.thicken(plate.difference(text), 0.2)
+    return plate, plate.difference(gaps).buffer(0.01).buffer(-0.01)
+
+
 def design(font_key):
     font = os.path.join(HERE, "fonts", FONTS[font_key])
     inner_w = W - 2 * MARGIN
@@ -127,16 +140,18 @@ def main():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import trimesh
-    keys = sys.argv[1:] or ["ruqaa", "amiri"]
-    fig, axs = plt.subplots(len(keys), 1, figsize=(8, 4.6 * len(keys)))
+    line = "--line" in sys.argv
+    keys = [a for a in sys.argv[1:] if not a.startswith("--")] or ["ruqaa", "amiri"]
+    suffix = "_line" if line else ""
+    fig, axs = plt.subplots(len(keys), 1, figsize=(8, (2.6 if line else 4.6) * len(keys)))
     axs = np.atleast_1d(axs)
     for ax, key in zip(axs, keys):
-        plate, text = design(key)
+        plate, text = design_line(key) if line else design(key)
         base = kc.extrude(plate, T_PLATE, 0)
         top = kc.extrude(text, T_TEXT, T_PLATE)
         single = trimesh.boolean.union([base, top], engine="manifold")
         assert base.is_volume and top.is_volume and single.is_volume
-        pre = os.path.join(ROOT, "stl", f"sign_mornaguia_{key}")
+        pre = os.path.join(ROOT, "stl", f"sign_mornaguia_{key}{suffix}")
         base.export(pre + "_white_plate.stl")
         top.export(pre + "_black_text.stl")
         single.export(pre + "_single_color.stl")
@@ -148,7 +163,7 @@ def main():
         ax.set_xlim(-W / 2 - 5, W / 2 + 5); ax.set_ylim(-H / 2 - 5, H / 2 + 5)
         ax.set_aspect("equal"); ax.axis("off"); ax.set_title(f"{key}: {W:.0f} x {H:.0f} mm", color="k")
     plt.tight_layout()
-    plt.savefig(os.path.join(ROOT, "images", "sign_mornaguia_preview.png"), dpi=110, bbox_inches="tight")
+    plt.savefig(os.path.join(ROOT, "images", f"sign_mornaguia{suffix}_preview.png"), dpi=110, bbox_inches="tight")
 
 
 def kc_draw(ax, g, color):
