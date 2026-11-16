@@ -3,6 +3,7 @@
 python3 sign/make_sign.py [font] [--line]      font: ruqaa (Aref Ruqaa Bold) or amiri (Amiri Bold, Naskh)
 -> stl/sign_mornaguia_<font>.3mf (white plaque filament 1, black text filament 2), STLs and a preview.
 --line: the whole phrase on one line; the plaque height follows the text (files end in _line).
+--size=120x40: one line on a plaque of exactly that size (mm), text fitted inside 5 mm margins.
 
 Arabic is shaped with HarfBuzz (joined letter forms, ligatures, right-to-left), then the glyph outlines are
 turned into shapes. Layout: the title large on top, a rule, the second line below.
@@ -101,12 +102,18 @@ def fit(g, w, h):
     return affinity.translate(g, -(x0 + x1) / 2, -(y0 + y1) / 2)
 
 
-def design_line(font_key):
-    """The whole phrase on one line, plaque fitted around it with even margins."""
-    global H
+def design_line(font_key, size=None):
+    """The whole phrase on one line. Without `size` the plaque height follows the text; with size=(w, h) the
+    plaque is w x h mm and the text is fitted inside a 5 mm margin."""
+    global W, H
     font = os.path.join(HERE, "fonts", FONTS[font_key])
-    text = fit(shape_text(TITLE + " " + SUBTITLE, font), W - 2 * MARGIN, 60.0)
-    H = round((text.bounds[3] - text.bounds[1]) + 2 * MARGIN)
+    phrase = shape_text(TITLE + " " + SUBTITLE, font)
+    if size:
+        W, H = size
+        text = fit(phrase, W - 10.0, H - 10.0)
+    else:
+        text = fit(phrase, W - 2 * MARGIN, 60.0)
+        H = round((text.bounds[3] - text.bounds[1]) + 2 * MARGIN)
     text = kc.thicken(text, kc.MIN_STROKE / 2)
     plate = box(-W / 2, -H / 2, W / 2, H / 2)
     gaps = kc.thicken(plate.difference(text), 0.2)
@@ -140,13 +147,17 @@ def main():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import trimesh
-    line = "--line" in sys.argv
+    size = None
+    for a in sys.argv[1:]:
+        if a.startswith("--size="):                                 # e.g. --size=120x40 (mm)
+            size = tuple(float(x) for x in a.split("=")[1].lower().split("x"))
+    line = "--line" in sys.argv or size is not None
     keys = [a for a in sys.argv[1:] if not a.startswith("--")] or ["ruqaa", "amiri"]
-    suffix = "_line" if line else ""
+    suffix = (f"_{size[0]:.0f}x{size[1]:.0f}" if size else "_line") if line else ""
     fig, axs = plt.subplots(len(keys), 1, figsize=(8, (2.6 if line else 4.6) * len(keys)))
     axs = np.atleast_1d(axs)
     for ax, key in zip(axs, keys):
-        plate, text = design_line(key) if line else design(key)
+        plate, text = design_line(key, size) if line else design(key)
         base = kc.extrude(plate, T_PLATE, 0)
         top = kc.extrude(text, T_TEXT, T_PLATE)
         single = trimesh.boolean.union([base, top], engine="manifold")
